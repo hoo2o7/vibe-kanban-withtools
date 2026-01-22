@@ -156,7 +156,7 @@ export function DocumentsPage() {
       </div>
 
       {/* Main Content */}
-      <div className="flex flex-1 min-h-0">
+      <div className="flex flex-1 min-h-0 min-w-0">
         {/* Sidebar - File List */}
         <div className="w-72 border-r flex flex-col bg-muted/30">
           {/* Search */}
@@ -203,7 +203,7 @@ export function DocumentsPage() {
         </div>
 
         {/* Content Area */}
-        <div className="flex-1 flex flex-col min-h-0">
+        <div className="flex-1 flex flex-col min-h-0 min-w-0">
           {loadingContent ? (
             <div className="flex items-center justify-center flex-1">
               <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
