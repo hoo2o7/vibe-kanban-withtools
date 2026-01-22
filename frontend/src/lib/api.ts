@@ -13,6 +13,8 @@ import {
   CreateTag,
   DirectoryListResponse,
   DirectoryEntry,
+  DocumentMetadata,
+  DocumentContent,
   ExecutionProcess,
   ExecutionProcessRepoState,
   GitBranch,
@@ -1343,5 +1345,59 @@ export const queueApi = {
   getStatus: async (sessionId: string): Promise<QueueStatus> => {
     const response = await makeRequest(`/api/sessions/${sessionId}/queue`);
     return handleApiResponse<QueueStatus>(response);
+  },
+};
+
+// Documents API - for viewing project markdown and JSON files
+export const documentsApi = {
+  /**
+   * List all markdown and JSON documents in the project (including subdirectories)
+   */
+  list: async (
+    projectId: string
+  ): Promise<{ documents: DocumentMetadata[] }> => {
+    const response = await makeRequest(
+      `/api/projects/${projectId}/documents`
+    );
+    return handleApiResponse<{ documents: DocumentMetadata[] }>(response);
+  },
+
+  /**
+   * Get content of a specific document by relative path
+   * @param projectId - Project ID
+   * @param relativePath - Relative path from repo root (e.g., "docs/README.md")
+   */
+  get: async (
+    projectId: string,
+    relativePath: string
+  ): Promise<DocumentContent> => {
+    // Encode the relative path - encodeURIComponent handles slashes too
+    const encodedPath = encodeURIComponent(relativePath);
+    const response = await makeRequest(
+      `/api/projects/${projectId}/documents/${encodedPath}`
+    );
+    return handleApiResponse<DocumentContent>(response);
+  },
+
+  /**
+   * Update content of a specific document
+   * @param projectId - Project ID
+   * @param relativePath - Relative path from repo root (e.g., "docs/README.md")
+   * @param content - New content to save
+   */
+  update: async (
+    projectId: string,
+    relativePath: string,
+    content: string
+  ): Promise<{ success: boolean; message: string }> => {
+    const encodedPath = encodeURIComponent(relativePath);
+    const response = await makeRequest(
+      `/api/projects/${projectId}/documents/${encodedPath}`,
+      {
+        method: 'PUT',
+        body: JSON.stringify({ content }),
+      }
+    );
+    return handleApiResponse<{ success: boolean; message: string }>(response);
   },
 };

@@ -358,6 +358,26 @@ export type WorkspaceSummaryResponse = { summaries: Array<WorkspaceSummary>, };
 
 export type DiffStats = { files_changed: number, lines_added: number, lines_removed: number, };
 
+export type DocumentFileType = "markdown" | "json";
+
+export type DocumentMetadata = { 
+/**
+ * File name (just the name, not the path)
+ */
+name: string, 
+/**
+ * Relative path from repo root (e.g., "docs/README.md")
+ */
+relative_path: string, 
+/**
+ * Absolute path on filesystem
+ */
+absolute_path: string, file_type: DocumentFileType, size_bytes: bigint, };
+
+export type DocumentContent = { metadata: DocumentMetadata, content: string, };
+
+export type ListDocumentsResponse = { documents: Array<DocumentMetadata>, };
+
 export type DirectoryEntry = { name: string, path: string, is_directory: boolean, is_git_repo: boolean, last_modified: bigint | null, };
 
 export type DirectoryListResponse = { entries: Array<DirectoryEntry>, current_path: string, };

@@ -19,6 +19,7 @@ import {
   Plus,
   LogOut,
   LogIn,
+  FileText,
 } from 'lucide-react';
 import { Logo } from '@/components/Logo';
 import { SearchBar } from '@/components/SearchBar';
@@ -219,6 +220,26 @@ export function Navbar() {
                       className="h-9 w-9"
                     />
                   )}
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-9 w-9"
+                          asChild
+                          aria-label="View project documents"
+                        >
+                          <Link to={`/projects/${projectId}/documents`}>
+                            <FileText className="h-4 w-4" />
+                          </Link>
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom">
+                        View Documents
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                   <Button
                     variant="ghost"
                     size="icon"
