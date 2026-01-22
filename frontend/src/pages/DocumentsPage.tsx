@@ -17,6 +17,10 @@ import { TiptapMarkdownViewer } from '@/components/documents/TiptapMarkdownViewe
 import { JsonTreeView } from '@/components/documents/JsonTreeView';
 import { FolderTree } from '@/components/documents/FolderTree';
 import {
+  CreateFolderDialog,
+  CreateFileDialog,
+} from '@/components/documents/dialogs';
+import {
   ConceptualModelViewer,
   UserStoriesViewer,
   TasksViewer,
@@ -126,6 +130,84 @@ export function DocumentsPage() {
     return `${(size / (1024 * 1024)).toFixed(1)} MB`;
   };
 
+  // Get existing names in a folder for validation
+  const getExistingNames = useCallback((parentPath: string) => {
+    const prefix = parentPath ? `${parentPath}/` : '';
+    return documents
+      .filter((doc) => {
+        if (parentPath) {
+          return doc.relative_path.startsWith(prefix);
+        }
+        return !doc.relative_path.includes('/');
+      })
+      .map((doc) => {
+        const relativePart = parentPath
+          ? doc.relative_path.slice(prefix.length)
+          : doc.relative_path;
+        const firstSegment = relativePart.split('/')[0];
+        return firstSegment;
+      })
+      .filter((name, index, self) => self.indexOf(name) === index);
+  }, [documents]);
+
+  // Refresh documents list
+  const refreshDocuments = useCallback(async () => {
+    if (!projectId) return;
+    try {
+      const response = await documentsApi.list(projectId);
+      setDocuments(response.documents);
+      setFilteredDocuments(response.documents);
+    } catch (err) {
+      console.error('Failed to refresh documents:', err);
+    }
+  }, [projectId]);
+
+  // Handle create folder
+  const handleCreateFolder = useCallback(async (parentPath: string) => {
+    if (!projectId) return;
+
+    const existingNames = getExistingNames(parentPath);
+    const result = await CreateFolderDialog.show({
+      parentPath,
+      existingNames,
+    });
+
+    if (result.action === 'created' && result.fullPath) {
+      try {
+        // Create folder with a placeholder README.md to make it visible in the tree
+        const readmePath = `${result.fullPath}/README.md`;
+        await documentsApi.createFile(projectId, readmePath, `# ${result.folderName}\n`);
+        await refreshDocuments();
+      } catch (err) {
+        console.error('Failed to create folder:', err);
+        setError(err instanceof Error ? err.message : 'Failed to create folder');
+      }
+    }
+  }, [projectId, getExistingNames, refreshDocuments]);
+
+  // Handle create file
+  const handleCreateFile = useCallback(async (parentPath: string) => {
+    if (!projectId) return;
+
+    const existingNames = getExistingNames(parentPath);
+    const result = await CreateFileDialog.show({
+      parentPath,
+      existingNames,
+    });
+
+    if (result.action === 'created' && result.fullPath) {
+      try {
+        const response = await documentsApi.createFile(projectId, result.fullPath, '');
+        await refreshDocuments();
+        // Auto-select the new file
+        loadDocument(response.metadata.relative_path);
+      } catch (err) {
+        console.error('Failed to create file:', err);
+        setError(err instanceof Error ? err.message : 'Failed to create file');
+      }
+    }
+  }, [projectId, getExistingNames, refreshDocuments, loadDocument]);
+
   const isJson = selectedDoc?.metadata.file_type === 'json';
   const specialJsonType = selectedDoc
     ? detectSpecialJsonType(selectedDoc.metadata.name)
@@ -197,6 +279,8 @@ export function DocumentsPage() {
                 selectedPath={selectedDoc?.metadata.relative_path || null}
                 onSelectDocument={loadDocument}
                 formatFileSize={formatFileSize}
+                onCreateFolder={handleCreateFolder}
+                onCreateFile={handleCreateFile}
               />
             )}
           </div>

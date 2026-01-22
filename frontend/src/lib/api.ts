@@ -1400,4 +1400,44 @@ export const documentsApi = {
     );
     return handleApiResponse<{ success: boolean; message: string }>(response);
   },
+
+  /**
+   * Create a new folder in the project repository
+   * @param projectId - Project ID
+   * @param path - Relative path for the new folder (e.g., "docs/subfolder")
+   */
+  createFolder: async (
+    projectId: string,
+    path: string
+  ): Promise<{ success: boolean; message: string; path: string }> => {
+    const response = await makeRequest(
+      `/api/projects/${projectId}/documents/folders`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ path }),
+      }
+    );
+    return handleApiResponse<{ success: boolean; message: string; path: string }>(response);
+  },
+
+  /**
+   * Create a new markdown file in the project repository
+   * @param projectId - Project ID
+   * @param path - Relative path for the new file (e.g., "docs/new-doc.md")
+   * @param content - Optional initial content
+   */
+  createFile: async (
+    projectId: string,
+    path: string,
+    content?: string
+  ): Promise<{ success: boolean; message: string; metadata: DocumentMetadata }> => {
+    const response = await makeRequest(
+      `/api/projects/${projectId}/documents/files`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ path, content: content ?? null }),
+      }
+    );
+    return handleApiResponse<{ success: boolean; message: string; metadata: DocumentMetadata }>(response);
+  },
 };

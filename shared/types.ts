@@ -378,6 +378,26 @@ export type DocumentContent = { metadata: DocumentMetadata, content: string, };
 
 export type ListDocumentsResponse = { documents: Array<DocumentMetadata>, };
 
+export type CreateFolderRequest = { 
+/**
+ * Relative path for the new folder (e.g., "seed_docs/subfolder")
+ */
+path: string, };
+
+export type CreateFolderResponse = { success: boolean, message: string, path: string, };
+
+export type CreateFileRequest = { 
+/**
+ * Relative path for the new file (e.g., "seed_docs/new-doc.md")
+ */
+path: string, 
+/**
+ * Optional initial content
+ */
+content: string | null, };
+
+export type CreateFileResponse = { success: boolean, message: string, metadata: DocumentMetadata, };
+
 export type DirectoryEntry = { name: string, path: string, is_directory: boolean, is_git_repo: boolean, last_modified: bigint | null, };
 
 export type DirectoryListResponse = { entries: Array<DirectoryEntry>, current_path: string, };

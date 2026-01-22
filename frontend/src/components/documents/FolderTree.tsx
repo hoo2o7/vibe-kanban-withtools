@@ -6,8 +6,18 @@ import {
   FolderOpen,
   FileText,
   FileJson,
+  FolderPlus,
+  FilePlus,
+  Plus,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import type { DocumentMetadata } from 'shared/types';
 
 interface FolderTreeProps {
@@ -15,6 +25,8 @@ interface FolderTreeProps {
   selectedPath: string | null;
   onSelectDocument: (relativePath: string) => void;
   formatFileSize: (bytes: number | bigint) => string;
+  onCreateFolder?: (parentPath: string) => void;
+  onCreateFile?: (parentPath: string) => void;
 }
 
 interface TreeNode {
@@ -108,6 +120,8 @@ interface TreeNodeComponentProps {
   selectedPath: string | null;
   onSelectDocument: (relativePath: string) => void;
   formatFileSize: (bytes: number | bigint) => string;
+  onCreateFolder?: (parentPath: string) => void;
+  onCreateFile?: (parentPath: string) => void;
 }
 
 function TreeNodeComponent({
@@ -118,41 +132,98 @@ function TreeNodeComponent({
   selectedPath,
   onSelectDocument,
   formatFileSize,
+  onCreateFolder,
+  onCreateFile,
 }: TreeNodeComponentProps) {
+  const [isHovered, setIsHovered] = useState(false);
   const isExpanded = expandedFolders.has(node.path);
   const isSelected = selectedPath === node.path;
   const indent = depth * 16;
 
+  const handleCreateFolder = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onCreateFolder?.(node.path);
+  };
+
+  const handleCreateFile = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onCreateFile?.(node.path);
+  };
+
   if (node.isFolder) {
     return (
       <div>
-        <button
-          onClick={() => toggleFolder(node.path)}
-          className={cn(
-            'w-full flex items-center gap-1.5 px-2 py-1.5 rounded-md text-sm transition-colors',
-            'hover:bg-accent text-foreground'
-          )}
-          style={{ paddingLeft: indent + 8 }}
+        <div
+          className="group relative"
+          onMouseEnter={() => setIsHovered(true)}
+          onMouseLeave={() => setIsHovered(false)}
         >
-          <span className="w-4 h-4 flex items-center justify-center text-muted-foreground">
-            {isExpanded ? (
-              <ChevronDown className="w-3.5 h-3.5" />
-            ) : (
-              <ChevronRight className="w-3.5 h-3.5" />
+          <button
+            onClick={() => toggleFolder(node.path)}
+            className={cn(
+              'w-full flex items-center gap-1.5 px-2 py-1.5 rounded-md text-sm transition-colors',
+              'hover:bg-accent text-foreground'
             )}
-          </span>
-          {isExpanded ? (
-            <FolderOpen className="w-4 h-4 text-amber-500 shrink-0" />
-          ) : (
-            <Folder className="w-4 h-4 text-amber-500 shrink-0" />
+            style={{ paddingLeft: indent + 8 }}
+          >
+            <span className="w-4 h-4 flex items-center justify-center text-muted-foreground">
+              {isExpanded ? (
+                <ChevronDown className="w-3.5 h-3.5" />
+              ) : (
+                <ChevronRight className="w-3.5 h-3.5" />
+              )}
+            </span>
+            {isExpanded ? (
+              <FolderOpen className="w-4 h-4 text-amber-500 shrink-0" />
+            ) : (
+              <Folder className="w-4 h-4 text-amber-500 shrink-0" />
+            )}
+            <span className="truncate flex-1 text-left font-medium">
+              {node.name}
+            </span>
+            <span className={cn(
+              "text-xs text-muted-foreground transition-opacity",
+              isHovered && (onCreateFolder || onCreateFile) ? "opacity-0" : "opacity-100"
+            )}>
+              {node.children.length}
+            </span>
+          </button>
+
+          {/* Hover action buttons */}
+          {(onCreateFolder || onCreateFile) && (
+            <div
+              className={cn(
+                "absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-0.5 transition-opacity",
+                isHovered ? "opacity-100" : "opacity-0 pointer-events-none"
+              )}
+            >
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    className="p-1 rounded hover:bg-accent-foreground/10"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <Plus className="w-3.5 h-3.5 text-muted-foreground" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-40">
+                  {onCreateFile && (
+                    <DropdownMenuItem onClick={handleCreateFile}>
+                      <FilePlus className="w-4 h-4 mr-2" />
+                      New File
+                    </DropdownMenuItem>
+                  )}
+                  {onCreateFolder && (
+                    <DropdownMenuItem onClick={handleCreateFolder}>
+                      <FolderPlus className="w-4 h-4 mr-2" />
+                      New Folder
+                    </DropdownMenuItem>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           )}
-          <span className="truncate flex-1 text-left font-medium">
-            {node.name}
-          </span>
-          <span className="text-xs text-muted-foreground">
-            {node.children.length}
-          </span>
-        </button>
+        </div>
 
         {isExpanded && (
           <div>
@@ -166,6 +237,8 @@ function TreeNodeComponent({
                 selectedPath={selectedPath}
                 onSelectDocument={onSelectDocument}
                 formatFileSize={formatFileSize}
+                onCreateFolder={onCreateFolder}
+                onCreateFile={onCreateFile}
               />
             ))}
           </div>
@@ -207,6 +280,8 @@ export function FolderTree({
   selectedPath,
   onSelectDocument,
   formatFileSize,
+  onCreateFolder,
+  onCreateFile,
 }: FolderTreeProps) {
   // Start with all folders expanded
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(() => {
@@ -270,23 +345,55 @@ export function FolderTree({
   return (
     <div className="flex flex-col h-full">
       {/* Toolbar */}
-      {folderCount > 0 && (
-        <div className="flex items-center gap-2 px-2 py-1.5 border-b">
-          <button
-            onClick={expandAll}
-            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-          >
-            Expand All
-          </button>
-          <span className="text-muted-foreground">|</span>
-          <button
-            onClick={collapseAll}
-            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-          >
-            Collapse All
-          </button>
+      <div className="flex items-center justify-between gap-2 px-2 py-1.5 border-b">
+        <div className="flex items-center gap-2">
+          {folderCount > 0 && (
+            <>
+              <button
+                onClick={expandAll}
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Expand All
+              </button>
+              <span className="text-muted-foreground">|</span>
+              <button
+                onClick={collapseAll}
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Collapse All
+              </button>
+            </>
+          )}
         </div>
-      )}
+
+        {/* Add buttons */}
+        {(onCreateFolder || onCreateFile) && (
+          <div className="flex items-center gap-1">
+            {onCreateFile && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6"
+                onClick={() => onCreateFile('')}
+                title="New File"
+              >
+                <FilePlus className="w-3.5 h-3.5" />
+              </Button>
+            )}
+            {onCreateFolder && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6"
+                onClick={() => onCreateFolder('')}
+                title="New Folder"
+              >
+                <FolderPlus className="w-3.5 h-3.5" />
+              </Button>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* Tree */}
       <div className="flex-1 overflow-auto py-1">
@@ -300,6 +407,8 @@ export function FolderTree({
             selectedPath={selectedPath}
             onSelectDocument={onSelectDocument}
             formatFileSize={formatFileSize}
+            onCreateFolder={onCreateFolder}
+            onCreateFile={onCreateFile}
           />
         ))}
       </div>

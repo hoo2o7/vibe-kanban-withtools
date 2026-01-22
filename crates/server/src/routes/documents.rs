@@ -6,7 +6,7 @@ use axum::{
     http::StatusCode,
     middleware::{Next, from_fn_with_state},
     response::{Json as ResponseJson, Response},
-    routing::{get, put},
+    routing::{get, post},
 };
 use db::models::project::Project;
 use deployment::Deployment;
@@ -62,6 +62,38 @@ pub struct UpdateDocumentRequest {
 pub struct UpdateDocumentResponse {
     pub success: bool,
     pub message: String,
+}
+
+/// Request body for creating a folder
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+pub struct CreateFolderRequest {
+    /// Relative path for the new folder (e.g., "seed_docs/subfolder")
+    pub path: String,
+}
+
+/// Response for folder creation
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+pub struct CreateFolderResponse {
+    pub success: bool,
+    pub message: String,
+    pub path: String,
+}
+
+/// Request body for creating a file
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+pub struct CreateFileRequest {
+    /// Relative path for the new file (e.g., "seed_docs/new-doc.md")
+    pub path: String,
+    /// Optional initial content
+    pub content: Option<String>,
+}
+
+/// Response for file creation
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+pub struct CreateFileResponse {
+    pub success: bool,
+    pub message: String,
+    pub metadata: DocumentMetadata,
 }
 
 /// Directories to skip during recursive scanning
@@ -365,10 +397,199 @@ pub async fn update_document_content(
     )))
 }
 
+/// Create a new folder in the project repository
+pub async fn create_folder(
+    State(deployment): State<DeploymentImpl>,
+    Extension(project): Extension<Project>,
+    ResponseJson(body): ResponseJson<CreateFolderRequest>,
+) -> Result<ResponseJson<ApiResponse<CreateFolderResponse>>, ApiError> {
+    let repositories = deployment
+        .project()
+        .get_repositories(&deployment.db().pool, project.id)
+        .await?;
+
+    // Get the first repository (primary repository)
+    let repo = repositories.first().ok_or_else(|| {
+        ApiError::BadRequest("No repository found for this project".to_string())
+    })?;
+
+    let repo_path = PathBuf::from(&repo.path);
+
+    if !repo_path.exists() || !repo_path.is_dir() {
+        return Err(ApiError::BadRequest(
+            "Repository path does not exist".to_string(),
+        ));
+    }
+
+    // Validate the path (no path traversal)
+    let folder_path = body.path.trim();
+    if folder_path.is_empty() {
+        return Err(ApiError::BadRequest("Folder path cannot be empty".to_string()));
+    }
+    if folder_path.contains("..") {
+        return Err(ApiError::BadRequest(
+            "Invalid path: path traversal not allowed".to_string(),
+        ));
+    }
+
+    let full_path = repo_path.join(folder_path);
+
+    // Security: Ensure the path is within the repository
+    let canonical_repo = repo_path.canonicalize().map_err(|e| {
+        ApiError::BadRequest(format!("Failed to resolve repository path: {}", e))
+    })?;
+
+    // For new paths, we need to check the parent exists and is within repo
+    if let Some(parent) = full_path.parent() {
+        if parent.exists() {
+            let canonical_parent = parent.canonicalize().map_err(|e| {
+                ApiError::BadRequest(format!("Failed to resolve parent path: {}", e))
+            })?;
+            if !canonical_parent.starts_with(&canonical_repo) {
+                return Err(ApiError::BadRequest(
+                    "Invalid path: access denied".to_string(),
+                ));
+            }
+        }
+    }
+
+    // Check if folder already exists
+    if full_path.exists() {
+        return Err(ApiError::BadRequest(format!(
+            "Folder '{}' already exists",
+            folder_path
+        )));
+    }
+
+    // Create the folder
+    std::fs::create_dir_all(&full_path).map_err(|e| {
+        tracing::error!("Failed to create folder {:?}: {}", full_path, e);
+        ApiError::BadRequest(format!("Failed to create folder: {}", e))
+    })?;
+
+    tracing::info!("Folder created: {:?}", full_path);
+
+    Ok(ResponseJson(ApiResponse::success(CreateFolderResponse {
+        success: true,
+        message: "Folder created successfully".to_string(),
+        path: folder_path.to_string(),
+    })))
+}
+
+/// Create a new markdown file in the project repository
+pub async fn create_file(
+    State(deployment): State<DeploymentImpl>,
+    Extension(project): Extension<Project>,
+    ResponseJson(body): ResponseJson<CreateFileRequest>,
+) -> Result<ResponseJson<ApiResponse<CreateFileResponse>>, ApiError> {
+    let repositories = deployment
+        .project()
+        .get_repositories(&deployment.db().pool, project.id)
+        .await?;
+
+    // Get the first repository (primary repository)
+    let repo = repositories.first().ok_or_else(|| {
+        ApiError::BadRequest("No repository found for this project".to_string())
+    })?;
+
+    let repo_path = PathBuf::from(&repo.path);
+
+    if !repo_path.exists() || !repo_path.is_dir() {
+        return Err(ApiError::BadRequest(
+            "Repository path does not exist".to_string(),
+        ));
+    }
+
+    // Validate the path (no path traversal)
+    let file_path_str = body.path.trim();
+    if file_path_str.is_empty() {
+        return Err(ApiError::BadRequest("File path cannot be empty".to_string()));
+    }
+    if file_path_str.contains("..") {
+        return Err(ApiError::BadRequest(
+            "Invalid path: path traversal not allowed".to_string(),
+        ));
+    }
+
+    // Validate file extension (only markdown allowed)
+    let path_obj = Path::new(file_path_str);
+    match path_obj.extension().and_then(|e| e.to_str()) {
+        Some("md") | Some("markdown") => {}
+        _ => {
+            return Err(ApiError::BadRequest(
+                "Only markdown files (.md, .markdown) are allowed".to_string(),
+            ))
+        }
+    }
+
+    let full_path = repo_path.join(file_path_str);
+
+    // Security: Ensure the path is within the repository
+    let canonical_repo = repo_path.canonicalize().map_err(|e| {
+        ApiError::BadRequest(format!("Failed to resolve repository path: {}", e))
+    })?;
+
+    // For new paths, we need to check the parent exists and is within repo
+    if let Some(parent) = full_path.parent() {
+        if parent.exists() {
+            let canonical_parent = parent.canonicalize().map_err(|e| {
+                ApiError::BadRequest(format!("Failed to resolve parent path: {}", e))
+            })?;
+            if !canonical_parent.starts_with(&canonical_repo) {
+                return Err(ApiError::BadRequest(
+                    "Invalid path: access denied".to_string(),
+                ));
+            }
+        } else {
+            // Create parent directories if they don't exist
+            std::fs::create_dir_all(parent).map_err(|e| {
+                ApiError::BadRequest(format!("Failed to create parent directories: {}", e))
+            })?;
+        }
+    }
+
+    // Check if file already exists
+    if full_path.exists() {
+        return Err(ApiError::BadRequest(format!(
+            "File '{}' already exists",
+            file_path_str
+        )));
+    }
+
+    // Write content to file
+    let content = body.content.unwrap_or_default();
+    std::fs::write(&full_path, &content).map_err(|e| {
+        tracing::error!("Failed to create file {:?}: {}", full_path, e);
+        ApiError::BadRequest(format!("Failed to create file: {}", e))
+    })?;
+
+    tracing::info!("File created: {:?}", full_path);
+
+    // Get file name
+    let name = full_path
+        .file_name()
+        .map(|n| n.to_string_lossy().to_string())
+        .unwrap_or_else(|| file_path_str.to_string());
+
+    Ok(ResponseJson(ApiResponse::success(CreateFileResponse {
+        success: true,
+        message: "File created successfully".to_string(),
+        metadata: DocumentMetadata {
+            name,
+            relative_path: file_path_str.to_string(),
+            absolute_path: full_path.to_string_lossy().to_string(),
+            file_type: DocumentFileType::Markdown,
+            size_bytes: content.len() as u64,
+        },
+    })))
+}
+
 pub fn router(deployment: &DeploymentImpl) -> Router<DeploymentImpl> {
-    // Router for listing documents (no wildcard path)
+    // Router for listing documents and creating folders/files (no wildcard path)
     let list_router = Router::new()
         .route("/", get(list_project_documents))
+        .route("/folders", post(create_folder))
+        .route("/files", post(create_file))
         .layer(from_fn_with_state(
             deployment.clone(),
             load_project_middleware,
