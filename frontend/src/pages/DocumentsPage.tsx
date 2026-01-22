@@ -14,9 +14,14 @@ import { Button } from '@/components/ui/button';
 import { documentsApi } from '@/lib/api';
 import { useProjects } from '@/hooks/useProjects';
 import { TiptapMarkdownViewer } from '@/components/documents/TiptapMarkdownViewer';
-import { JsonDiagram } from '@/components/documents/JsonDiagram';
 import { JsonTreeView } from '@/components/documents/JsonTreeView';
 import { FolderTree } from '@/components/documents/FolderTree';
+import {
+  ConceptualModelViewer,
+  UserStoriesViewer,
+  TasksViewer,
+} from '@/components/documents/viewers';
+import { detectSpecialJsonType } from '@/utils/jsonViewerUtils';
 import type { DocumentMetadata, DocumentContent } from 'shared/types';
 
 type ViewMode = 'content' | 'diagram' | 'tree' | 'raw';
@@ -50,7 +55,10 @@ export function DocumentsPage() {
 
         // Set appropriate view mode based on file type
         if (content.metadata.file_type === 'json') {
-          setViewMode('diagram');
+          const specialType = detectSpecialJsonType(content.metadata.name);
+          // If it's a special JSON type, default to 'diagram' (visualization)
+          // Otherwise, default to 'tree'
+          setViewMode(specialType !== null ? 'diagram' : 'tree');
         } else {
           setViewMode('content');
         }
@@ -119,6 +127,10 @@ export function DocumentsPage() {
   };
 
   const isJson = selectedDoc?.metadata.file_type === 'json';
+  const specialJsonType = selectedDoc
+    ? detectSpecialJsonType(selectedDoc.metadata.name)
+    : null;
+  const hasCustomViewer = specialJsonType !== null;
 
   return (
     <div className="flex flex-col h-full bg-background">
@@ -214,15 +226,18 @@ export function DocumentsPage() {
                 <div className="flex items-center gap-1 bg-muted rounded-lg p-1 shrink-0">
                   {isJson ? (
                     <>
-                      <Button
-                        variant={viewMode === 'diagram' ? 'secondary' : 'ghost'}
-                        size="sm"
-                        className="h-7 text-xs"
-                        onClick={() => setViewMode('diagram')}
-                      >
-                        <LayoutGrid className="w-3 h-3 mr-1" />
-                        Diagram
-                      </Button>
+                      {/* Show visualization tab only for special JSON types */}
+                      {hasCustomViewer && (
+                        <Button
+                          variant={viewMode === 'diagram' ? 'secondary' : 'ghost'}
+                          size="sm"
+                          className="h-7 text-xs"
+                          onClick={() => setViewMode('diagram')}
+                        >
+                          <LayoutGrid className="w-3 h-3 mr-1" />
+                          시각화
+                        </Button>
+                      )}
                       <Button
                         variant={viewMode === 'tree' ? 'secondary' : 'ghost'}
                         size="sm"
@@ -268,11 +283,27 @@ export function DocumentsPage() {
                   </div>
                 )}
 
-                {viewMode === 'diagram' && isJson && (
-                  <JsonDiagram
-                    content={selectedDoc.content}
-                    className="h-full"
-                  />
+                {viewMode === 'diagram' && isJson && hasCustomViewer && (
+                  <>
+                    {specialJsonType === 'conceptual_model' && (
+                      <ConceptualModelViewer
+                        content={selectedDoc.content}
+                        className="h-full"
+                      />
+                    )}
+                    {specialJsonType === 'user_stories_data' && (
+                      <UserStoriesViewer
+                        content={selectedDoc.content}
+                        className="h-full"
+                      />
+                    )}
+                    {specialJsonType === 'tasks' && (
+                      <TasksViewer
+                        content={selectedDoc.content}
+                        className="h-full"
+                      />
+                    )}
+                  </>
                 )}
 
                 {viewMode === 'tree' && isJson && (

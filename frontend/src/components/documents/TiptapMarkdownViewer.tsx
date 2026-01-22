@@ -11,6 +11,8 @@ import { cn } from '@/lib/utils';
 import { documentsApi } from '@/lib/api';
 import { Loader2, Check, AlertCircle } from 'lucide-react';
 
+type TimeoutId = ReturnType<typeof setTimeout>;
+
 const lowlight = createLowlight(common);
 
 // Define extensions outside component to avoid recreation
@@ -156,7 +158,7 @@ export function TiptapMarkdownViewer({
   onContentChange,
 }: TiptapMarkdownViewerProps) {
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
-  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const saveTimeoutRef = useRef<TimeoutId | null>(null);
   const lastSavedContentRef = useRef<string>(content);
 
   // Convert markdown to HTML
@@ -348,7 +350,7 @@ export function TiptapMarkdownViewer({
         }
         
         .tiptap-editor a {
-          color: hsl(var(--primary));
+          color: hsl(var(--muted-foreground));
           text-decoration: none;
         }
         
