@@ -1029,6 +1029,37 @@ impl ContainerService for LocalContainerService {
         WorkspaceManager::ensure_workspace_exists(&workspace_dir, &repositories, &workspace.branch)
             .await?;
 
+        // Sync document files from main branch to each worktree
+        // This ensures task branches have the latest documents before execution
+        for repo in &repositories {
+            let worktree_path = workspace_dir.join(&repo.name);
+            if worktree_path.exists() {
+                match self.git().sync_docs_from_branch(&worktree_path, "main") {
+                    Ok(count) if count > 0 => {
+                        tracing::info!(
+                            "Synced {} document files from main to worktree {:?}",
+                            count,
+                            worktree_path
+                        );
+                    }
+                    Ok(_) => {
+                        tracing::debug!(
+                            "No document files to sync for worktree {:?}",
+                            worktree_path
+                        );
+                    }
+                    Err(e) => {
+                        // Log warning but don't fail - document sync is best-effort
+                        tracing::warn!(
+                            "Failed to sync documents from main to worktree {:?}: {}",
+                            worktree_path,
+                            e
+                        );
+                    }
+                }
+            }
+        }
+
         if workspace.container_ref.is_none() {
             Workspace::update_container_ref(
                 &self.db.pool,

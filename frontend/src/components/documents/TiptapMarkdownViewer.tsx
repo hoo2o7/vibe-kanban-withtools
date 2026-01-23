@@ -45,6 +45,8 @@ interface TiptapMarkdownViewerProps {
   projectId: string;
   relativePath: string;
   onContentChange?: (content: string) => void;
+  /** If true, the editor is read-only and cannot be edited */
+  readOnly?: boolean;
 }
 
 // Convert HTML back to Markdown (simplified)
@@ -156,6 +158,7 @@ export function TiptapMarkdownViewer({
   projectId,
   relativePath,
   onContentChange,
+  readOnly = false,
 }: TiptapMarkdownViewerProps) {
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
   const saveTimeoutRef = useRef<TimeoutId | null>(null);
@@ -224,14 +227,19 @@ export function TiptapMarkdownViewer({
   const editor = useEditor({
     extensions,
     content: htmlContent,
-    editable: true,
+    editable: !readOnly,
     editorProps: {
       attributes: {
-        class: 'tiptap-editor focus:outline-none min-h-[200px]',
+        class: cn(
+          'tiptap-editor focus:outline-none min-h-[200px]',
+          readOnly && 'cursor-default'
+        ),
       },
     },
     onUpdate: ({ editor }) => {
-      debouncedSave(editor.getHTML());
+      if (!readOnly) {
+        debouncedSave(editor.getHTML());
+      }
     },
   });
 
@@ -245,6 +253,13 @@ export function TiptapMarkdownViewer({
       }
     }
   }, [editor, htmlContent, content]);
+
+  // Update editable state when readOnly changes
+  useEffect(() => {
+    if (editor) {
+      editor.setEditable(!readOnly);
+    }
+  }, [editor, readOnly]);
 
   // Cleanup timeout on unmount
   useEffect(() => {

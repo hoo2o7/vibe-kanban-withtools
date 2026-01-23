@@ -291,6 +291,145 @@ impl GitService {
         Ok(true)
     }
 
+    /// Checkout a branch in the given repository
+    pub fn checkout(&self, repo_path: &Path, branch: &str) -> Result<(), GitServiceError> {
+        let git = GitCli::new();
+        git.checkout(repo_path, branch)
+            .map_err(|e| GitServiceError::InvalidRepository(format!("git checkout failed: {e}")))?;
+        Ok(())
+    }
+
+    /// Checkout a branch, automatically stashing and restoring changes if needed.
+    /// Returns true if stash was used, false otherwise.
+    pub fn checkout_with_stash(
+        &self,
+        repo_path: &Path,
+        branch: &str,
+    ) -> Result<bool, GitServiceError> {
+        let git = GitCli::new();
+        git.checkout_with_stash(repo_path, branch).map_err(|e| {
+            GitServiceError::InvalidRepository(format!("git checkout with stash failed: {e}"))
+        })
+    }
+
+    /// Fetch a branch from a remote.
+    pub fn fetch(
+        &self,
+        repo_path: &Path,
+        remote: &str,
+        branch: &str,
+    ) -> Result<(), GitServiceError> {
+        let git = GitCli::new();
+        git.fetch(repo_path, remote, branch)
+            .map_err(|e| GitServiceError::InvalidRepository(format!("git fetch failed: {e}")))?;
+        Ok(())
+    }
+
+    /// Get the number of commits ahead and behind compared to a remote branch.
+    /// Returns (ahead, behind) tuple.
+    pub fn get_ahead_behind(
+        &self,
+        repo_path: &Path,
+        local_branch: &str,
+        remote_branch: &str,
+    ) -> Result<(usize, usize), GitServiceError> {
+        let git = GitCli::new();
+        git.get_ahead_behind(repo_path, local_branch, remote_branch)
+            .map_err(|e| {
+                GitServiceError::InvalidRepository(format!("git rev-list failed: {e}"))
+            })
+    }
+
+    /// Pull with rebase from a remote branch.
+    pub fn pull_rebase(
+        &self,
+        repo_path: &Path,
+        remote: &str,
+        branch: &str,
+    ) -> Result<(), GitServiceError> {
+        let git = GitCli::new();
+        git.pull_rebase(repo_path, remote, branch)
+            .map_err(|e| GitServiceError::InvalidRepository(format!("git pull --rebase failed: {e}")))?;
+        Ok(())
+    }
+
+    /// Push a branch to a remote.
+    pub fn push(
+        &self,
+        repo_path: &Path,
+        remote_url: &str,
+        branch: &str,
+        force: bool,
+    ) -> Result<(), GitServiceError> {
+        let git = GitCli::new();
+        git.push(repo_path, remote_url, branch, force)
+            .map_err(|e| GitServiceError::InvalidRepository(format!("git push failed: {e}")))?;
+        Ok(())
+    }
+
+    /// Check if there are uncommitted changes.
+    pub fn has_uncommitted_changes(&self, repo_path: &Path) -> Result<bool, GitServiceError> {
+        let git = GitCli::new();
+        git.has_uncommitted_changes(repo_path)
+            .map_err(|e| GitServiceError::InvalidRepository(format!("git status check failed: {e}")))
+    }
+
+    /// Sync document files (.md, .json) from a source branch to the current worktree.
+    /// This copies all markdown and JSON files from the source branch without changing branches.
+    /// Returns the number of files synced.
+    pub fn sync_docs_from_branch(
+        &self,
+        worktree_path: &Path,
+        source_branch: &str,
+    ) -> Result<usize, GitServiceError> {
+        let git = GitCli::new();
+
+        // Get list of all files in the source branch
+        let all_files = git.list_files_in_branch(worktree_path, source_branch).map_err(|e| {
+            GitServiceError::InvalidRepository(format!(
+                "Failed to list files in branch '{}': {}",
+                source_branch, e
+            ))
+        })?;
+
+        // Filter for document files (.md, .json)
+        let doc_files: Vec<&str> = all_files
+            .iter()
+            .filter(|f| {
+                f.ends_with(".md")
+                    || f.ends_with(".markdown")
+                    || f.ends_with(".json")
+            })
+            .map(|s| s.as_str())
+            .collect();
+
+        if doc_files.is_empty() {
+            tracing::debug!(
+                "No document files found in branch '{}' to sync",
+                source_branch
+            );
+            return Ok(0);
+        }
+
+        tracing::info!(
+            "Syncing {} document files from '{}' to worktree {:?}",
+            doc_files.len(),
+            source_branch,
+            worktree_path
+        );
+
+        // Checkout all document files from the source branch
+        git.checkout_paths_from_branch(worktree_path, source_branch, &doc_files)
+            .map_err(|e| {
+                GitServiceError::InvalidRepository(format!(
+                    "Failed to checkout document files from '{}': {}",
+                    source_branch, e
+                ))
+            })?;
+
+        Ok(doc_files.len())
+    }
+
     /// Get diffs between branches or worktree changes
     pub fn get_diffs(
         &self,
