@@ -697,6 +697,7 @@ function SchemaTab({
 
   // Zoom: attach a non-passive wheel listener to avoid
   // "Unable to preventDefault inside passive event listener invocation."
+  // Zoom is centered on mouse position
   useEffect(() => {
     const el = canvasRef.current;
     if (!el) return;
@@ -704,8 +705,26 @@ function SchemaTab({
     const onWheel = (e: WheelEvent) => {
       if (e.ctrlKey || e.metaKey) {
         e.preventDefault();
+        
+        const rect = el.getBoundingClientRect();
+        // Mouse position relative to canvas element
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+        
+        // Calculate the point under mouse in canvas coordinates (before zoom)
+        const canvasX = (mouseX - pan.x) / zoom;
+        const canvasY = (mouseY - pan.y) / zoom;
+        
+        // Calculate new zoom level
         const delta = e.deltaY > 0 ? 0.9 : 1.1;
-        setZoom((prev) => Math.min(Math.max(prev * delta, 0.3), 2));
+        const newZoom = Math.min(Math.max(zoom * delta, 0.3), 2);
+        
+        // Calculate new pan to keep the same point under mouse
+        const newPanX = mouseX - canvasX * newZoom;
+        const newPanY = mouseY - canvasY * newZoom;
+        
+        setZoom(newZoom);
+        setPan({ x: newPanX, y: newPanY });
       }
     };
 
@@ -713,7 +732,7 @@ function SchemaTab({
     return () => {
       el.removeEventListener('wheel', onWheel);
     };
-  }, []);
+  }, [zoom, pan]);
 
   const selectedEntityData = normalizedEntities.find((e) => e.name === selectedEntity);
   const selectedEntityColorIndex =
