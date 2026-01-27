@@ -1,0 +1,3590 @@
+{
+    "version": "2.0.0",
+    "format": "skill-conceptual-model",
+    "timestamp": "2026-01-27T13:44:06.613461",
+    "description": "Skill-compatible conceptual model with explicit attribute relationships",
+    "project": {
+      "name": "BaraeCNP MES/ERP System",
+      "description": "Conceptual Data Model for Manufacturing Execution System (MES) and Enterprise Resource Planning (ERP)",
+      "version": "2.0.0",
+      "domain": "제조 및 판매 관리 시스템 (Corrugated Box Manufacturing)"
+    },
+    "summary": {
+      "totalEntities": 30,
+      "totalRelationships": 24,
+      "totalDomainRules": 7,
+      "totalDataFlows": 3,
+      "totalGlossaryTerms": 16,
+      "entityList": [
+        "Partner",
+        "SalesOrder",
+        "SalesOrderItem",
+        "BoxProduct",
+        "ProductionPlan",
+        "ProcessStep",
+        "Production",
+        "Equipment",
+        "PaperCode",
+        "Manila",
+        "PurchaseOrder",
+        "PurchaseOrderItem",
+        "Receiving",
+        "ReceivingItem",
+        "Inventory",
+        "Warehouse",
+        "Delivery",
+        "DeliveryItem",
+        "Invoice",
+        "InvoiceItem",
+        "Payment",
+        "AccountsReceivable",
+        "AccountsPayable",
+        "CompanyProfile",
+        "User",
+        "SalesPerson",
+        "ProcessCode",
+        "PalletType",
+        "BoxProductUnitPrice",
+        "BoxProductMaterial"
+      ]
+    },
+    "entities": [
+      {
+        "name": "Partner",
+        "businessName": "거래처",
+        "description": "고객 및 공급처를 통합 관리하는 거래처 정보",
+        "category": "core",
+        "attributes": [
+          {
+            "name": "id",
+            "type": "UUID",
+            "required": true,
+            "description": "거래처 고유 식별자"
+          },
+          {
+            "name": "code",
+            "type": "String",
+            "required": true,
+            "description": "거래처 코드 (예: P0001)"
+          },
+          {
+            "name": "name",
+            "type": "String",
+            "required": true,
+            "description": "거래처 상호"
+          },
+          {
+            "name": "partnerType",
+            "type": "Enum",
+            "required": true,
+            "description": "거래처 유형: 고객/공급처/둘다",
+            "enumValues": [
+              "customer",
+              "supplier",
+              "both"
+            ]
+          },
+          {
+            "name": "businessNumber",
+            "type": "String",
+            "required": false,
+            "description": "사업자번호"
+          },
+          {
+            "name": "representative",
+            "type": "String",
+            "required": false,
+            "description": "대표자명"
+          },
+          {
+            "name": "address",
+            "type": "String",
+            "required": false,
+            "description": "주소"
+          },
+          {
+            "name": "phone",
+            "type": "String",
+            "required": false,
+            "description": "연락처"
+          },
+          {
+            "name": "email",
+            "type": "String",
+            "required": false,
+            "description": "이메일"
+          },
+          {
+            "name": "paymentTerms",
+            "type": "String",
+            "required": false,
+            "description": "결제 조건",
+            "enumValues": [
+              "현금",
+              "월말",
+              "30일",
+              "60일"
+            ]
+          },
+          {
+            "name": "bankName",
+            "type": "String",
+            "required": false,
+            "description": "은행명"
+          },
+          {
+            "name": "bankAccount",
+            "type": "String",
+            "required": false,
+            "description": "계좌번호"
+          },
+          {
+            "name": "isActive",
+            "type": "Boolean",
+            "required": false,
+            "description": "활성 상태"
+          },
+          {
+            "name": "createdDate",
+            "type": "DateTime",
+            "required": true,
+            "description": "생성 일시"
+          }
+        ],
+        "userStories": [
+          "US-301",
+          "US-302",
+          "US-303",
+          "US-401"
+        ],
+        "relatedEntities": [
+          "DeliveryLocation",
+          "SalesOrder",
+          "PurchaseOrder",
+          "Invoice"
+        ]
+      },
+      {
+        "name": "SalesOrder",
+        "businessName": "수주",
+        "description": "고객으로부터 받은 주문 정보",
+        "category": "sales",
+        "attributes": [
+          {
+            "name": "id",
+            "type": "UUID",
+            "required": true,
+            "description": "수주 고유 식별자"
+          },
+          {
+            "name": "orderNumber",
+            "type": "String",
+            "required": true,
+            "description": "수주번호 (자동 채번)"
+          },
+          {
+            "name": "orderDate",
+            "type": "DateTime",
+            "required": true,
+            "description": "수주일자"
+          },
+          {
+            "name": "partnerId",
+            "type": "UUID",
+            "required": true,
+            "description": "거래처 ID (FK: Partner)",
+            "references": {
+              "entity": "Partner",
+              "attribute": "id",
+              "relationshipId": "rel-1",
+              "onDelete": "RESTRICT",
+              "onUpdate": "CASCADE",
+              "description": "외래키 - Partner의 id를 참조"
+            }
+          },
+          {
+            "name": "deliveryDate",
+            "type": "DateTime",
+            "required": false,
+            "description": "납기일"
+          },
+          {
+            "name": "salespersonId",
+            "type": "UUID",
+            "required": false,
+            "description": "담당 영업사원 ID (FK: SalesPerson)"
+          },
+          {
+            "name": "items",
+            "type": "Array[SalesOrderItem]",
+            "required": true,
+            "description": "수주 품목 목록"
+          },
+          {
+            "name": "subtotal",
+            "type": "Float",
+            "required": true,
+            "description": "공급가액"
+          },
+          {
+            "name": "taxAmount",
+            "type": "Float",
+            "required": true,
+            "description": "세액"
+          },
+          {
+            "name": "totalAmount",
+            "type": "Float",
+            "required": true,
+            "description": "합계액"
+          },
+          {
+            "name": "status",
+            "type": "Enum",
+            "required": true,
+            "description": "수주 상태",
+            "enumValues": [
+              "pending",
+              "confirmed",
+              "in_production",
+              "partial_delivery",
+              "completed",
+              "cancelled"
+            ]
+          },
+          {
+            "name": "mesStatus",
+            "type": "Enum",
+            "required": false,
+            "description": "MES 생산 상태",
+            "enumValues": [
+              "waiting",
+              "in_progress",
+              "completed"
+            ]
+          },
+          {
+            "name": "producedQuantity",
+            "type": "Integer",
+            "required": false,
+            "description": "생산 수량"
+          },
+          {
+            "name": "deliveredQuantity",
+            "type": "Integer",
+            "required": false,
+            "description": "납품 수량"
+          },
+          {
+            "name": "notes",
+            "type": "String",
+            "required": false,
+            "description": "비고"
+          },
+          {
+            "name": "createdDate",
+            "type": "DateTime",
+            "required": true,
+            "description": "생성 일시"
+          }
+        ],
+        "userStories": [
+          "US-101",
+          "US-103",
+          "US-104",
+          "US-201",
+          "US-301",
+          "US-302",
+          "US-303",
+          "US-304",
+          "US-305"
+        ],
+        "relatedEntities": [
+          "Partner",
+          "SalesOrderItem",
+          "BoxProduct",
+          "ProductionPlan",
+          "Production",
+          "Delivery",
+          "Invoice"
+        ]
+      },
+      {
+        "name": "SalesOrderItem",
+        "businessName": "수주 품목",
+        "description": "수주에 포함된 개별 품목",
+        "category": "sales",
+        "attributes": [
+          {
+            "name": "id",
+            "type": "UUID",
+            "required": true,
+            "description": "품목 고유 식별자"
+          },
+          {
+            "name": "salesOrderId",
+            "type": "UUID",
+            "required": true,
+            "description": "수주 ID (FK: SalesOrder)",
+            "references": {
+              "entity": "SalesOrder",
+              "attribute": "id",
+              "relationshipId": "rel-3",
+              "onDelete": "CASCADE",
+              "onUpdate": "CASCADE",
+              "description": "외래키 - SalesOrder의 id를 참조"
+            }
+          },
+          {
+            "name": "boxProductId",
+            "type": "UUID",
+            "required": true,
+            "description": "박스제품 ID (FK: BoxProduct)",
+            "references": {
+              "entity": "BoxProduct",
+              "attribute": "id",
+              "relationshipId": "rel-8",
+              "onDelete": "RESTRICT",
+              "onUpdate": "CASCADE",
+              "description": "외래키 - BoxProduct의 id를 참조"
+            }
+          },
+          {
+            "name": "productCode",
+            "type": "String",
+            "required": false,
+            "description": "제품 코드"
+          },
+          {
+            "name": "productName",
+            "type": "String",
+            "required": true,
+            "description": "제품명"
+          },
+          {
+            "name": "specification",
+            "type": "String",
+            "required": false,
+            "description": "규격 (예: 300x200x100)"
+          },
+          {
+            "name": "quantity",
+            "type": "Integer",
+            "required": true,
+            "description": "수량"
+          },
+          {
+            "name": "unit",
+            "type": "String",
+            "required": true,
+            "description": "단위 (예: 매, 박스)"
+          },
+          {
+            "name": "unitPrice",
+            "type": "Float",
+            "required": true,
+            "description": "단가"
+          },
+          {
+            "name": "amount",
+            "type": "Float",
+            "required": true,
+            "description": "금액"
+          },
+          {
+            "name": "taxRate",
+            "type": "Float",
+            "required": false,
+            "description": "세율 (%)"
+          },
+          {
+            "name": "createdDate",
+            "type": "DateTime",
+            "required": true,
+            "description": "생성 일시"
+          }
+        ],
+        "userStories": [
+          "US-301",
+          "US-305"
+        ],
+        "relatedEntities": [
+          "SalesOrder",
+          "BoxProduct"
+        ]
+      },
+      {
+        "name": "BoxProduct",
+        "businessName": "박스 제품",
+        "description": "거래처별 맞춤형 박스 제품 정보",
+        "category": "product",
+        "attributes": [
+          {
+            "name": "id",
+            "type": "UUID",
+            "required": true,
+            "description": "박스제품 고유 식별자"
+          },
+          {
+            "name": "code",
+            "type": "String",
+            "required": true,
+            "description": "박스제품 코드"
+          },
+          {
+            "name": "name",
+            "type": "String",
+            "required": true,
+            "description": "박스제품명"
+          },
+          {
+            "name": "partnerId",
+            "type": "UUID",
+            "required": false,
+            "description": "거래처 ID (FK: Partner)"
+          },
+          {
+            "name": "boxType",
+            "type": "Enum",
+            "required": false,
+            "description": "박스 형태",
+            "enumValues": [
+              "A-1",
+              "A-2",
+              "A-3",
+              "B-1",
+              "B-2",
+              "C-1",
+              "D-1"
+            ]
+          },
+          {
+            "name": "length",
+            "type": "Integer",
+            "required": true,
+            "description": "길이 (mm)"
+          },
+          {
+            "name": "width",
+            "type": "Integer",
+            "required": true,
+            "description": "너비 (mm)"
+          },
+          {
+            "name": "height",
+            "type": "Integer",
+            "required": true,
+            "description": "높이 (mm)"
+          },
+          {
+            "name": "paperCode",
+            "type": "String",
+            "required": false,
+            "description": "원단 코드 (FK: PaperCode)",
+            "references": {
+              "entity": "PaperCode",
+              "attribute": "code",
+              "relationshipId": "rel-9",
+              "onDelete": "SET NULL",
+              "onUpdate": "CASCADE",
+              "description": "외래키 - PaperCode의 code를 참조"
+            }
+          },
+          {
+            "name": "fluteType",
+            "type": "Enum",
+            "required": false,
+            "description": "골 종류",
+            "enumValues": [
+              "E골",
+              "B골",
+              "BB골",
+              "EB골"
+            ]
+          },
+          {
+            "name": "manilaCode",
+            "type": "String",
+            "required": false,
+            "description": "마닐라 코드 (FK: Manila)",
+            "references": {
+              "entity": "Manila",
+              "attribute": "code",
+              "relationshipId": "rel-10",
+              "onDelete": "SET NULL",
+              "onUpdate": "CASCADE",
+              "description": "외래키 - Manila의 code를 참조"
+            }
+          },
+          {
+            "name": "processFlags",
+            "type": "JSON",
+            "required": false,
+            "description": "공정 플래그 {cutting, printing, coating, laminating, die_cutting, gluing}"
+          },
+          {
+            "name": "unitPrices",
+            "type": "Array[UnitPrice]",
+            "required": false,
+            "description": "수량별 단가표"
+          },
+          {
+            "name": "stackingInfo",
+            "type": "JSON",
+            "required": false,
+            "description": "파렛트 적재 정보 {palletType, boxesPerLayer, layersPerPallet, totalPerPallet}"
+          },
+          {
+            "name": "workInstructions",
+            "type": "String",
+            "required": false,
+            "description": "작업 지시사항"
+          },
+          {
+            "name": "printImageUrl",
+            "type": "String",
+            "required": false,
+            "description": "인쇄 이미지 URL"
+          },
+          {
+            "name": "isActive",
+            "type": "Boolean",
+            "required": false,
+            "description": "활성 상태"
+          },
+          {
+            "name": "createdDate",
+            "type": "DateTime",
+            "required": true,
+            "description": "생성 일시"
+          }
+        ],
+        "userStories": [
+          "US-301",
+          "US-105",
+          "US-106"
+        ],
+        "relatedEntities": [
+          "Partner",
+          "PaperCode",
+          "Manila",
+          "SalesOrder",
+          "SalesOrderItem"
+        ]
+      },
+      {
+        "name": "ProductionPlan",
+        "businessName": "생산 계획",
+        "description": "수주를 기반으로 수립된 생산 계획 및 공정 순서",
+        "category": "production",
+        "attributes": [
+          {
+            "name": "id",
+            "type": "UUID",
+            "required": true,
+            "description": "생산계획 고유 식별자"
+          },
+          {
+            "name": "planNumber",
+            "type": "String",
+            "required": true,
+            "description": "계획번호"
+          },
+          {
+            "name": "planDate",
+            "type": "DateTime",
+            "required": true,
+            "description": "계획 일자"
+          },
+          {
+            "name": "salesOrderId",
+            "type": "UUID",
+            "required": true,
+            "description": "수주 ID (FK: SalesOrder)",
+            "references": {
+              "entity": "SalesOrder",
+              "attribute": "id",
+              "relationshipId": "rel-4",
+              "onDelete": "RESTRICT",
+              "onUpdate": "CASCADE",
+              "description": "외래키 - SalesOrder의 id를 참조"
+            }
+          },
+          {
+            "name": "processSteps",
+            "type": "Array[ProcessStep]",
+            "required": true,
+            "description": "공정 단계 목록"
+          },
+          {
+            "name": "status",
+            "type": "Enum",
+            "required": true,
+            "description": "계획 상태",
+            "enumValues": [
+              "draft",
+              "confirmed",
+              "in_progress",
+              "completed"
+            ]
+          },
+          {
+            "name": "notes",
+            "type": "String",
+            "required": false,
+            "description": "비고"
+          },
+          {
+            "name": "createdDate",
+            "type": "DateTime",
+            "required": true,
+            "description": "생성 일시"
+          }
+        ],
+        "userStories": [
+          "US-201",
+          "US-202"
+        ],
+        "relatedEntities": [
+          "SalesOrder",
+          "ProcessStep",
+          "Equipment"
+        ]
+      },
+      {
+        "name": "ProcessStep",
+        "businessName": "공정 단계",
+        "description": "생산 계획 내 개별 공정 정보",
+        "category": "production",
+        "attributes": [
+          {
+            "name": "id",
+            "type": "UUID",
+            "required": true,
+            "description": "공정단계 고유 식별자"
+          },
+          {
+            "name": "productionPlanId",
+            "type": "UUID",
+            "required": true,
+            "description": "생산계획 ID (FK: ProductionPlan)",
+            "references": {
+              "entity": "ProductionPlan",
+              "attribute": "id",
+              "relationshipId": "rel-11",
+              "onDelete": "CASCADE",
+              "onUpdate": "CASCADE",
+              "description": "외래키 - ProductionPlan의 id를 참조"
+            }
+          },
+          {
+            "name": "stepOrder",
+            "type": "Integer",
+            "required": true,
+            "description": "공정 순서"
+          },
+          {
+            "name": "processCode",
+            "type": "String",
+            "required": true,
+            "description": "공정 코드 (FK: ProcessCode)"
+          },
+          {
+            "name": "processName",
+            "type": "String",
+            "required": true,
+            "description": "공정명 (예: 재단, 인쇄, 코팅)"
+          },
+          {
+            "name": "equipmentId",
+            "type": "UUID",
+            "required": false,
+            "description": "설비 ID (FK: Equipment)",
+            "references": {
+              "entity": "Equipment",
+              "attribute": "id",
+              "relationshipId": "rel-12",
+              "onDelete": "SET NULL",
+              "onUpdate": "CASCADE",
+              "description": "외래키 - Equipment의 id를 참조"
+            }
+          },
+          {
+            "name": "equipmentName",
+            "type": "String",
+            "required": false,
+            "description": "설비명"
+          },
+          {
+            "name": "plannedStartTime",
+            "type": "String",
+            "required": true,
+            "description": "예정 시작 시각 (HH:mm)"
+          },
+          {
+            "name": "plannedEndTime",
+            "type": "String",
+            "required": true,
+            "description": "예정 종료 시각 (HH:mm)"
+          },
+          {
+            "name": "actualStartTime",
+            "type": "String",
+            "required": false,
+            "description": "실제 시작 시각 (HH:mm)"
+          },
+          {
+            "name": "actualEndTime",
+            "type": "String",
+            "required": false,
+            "description": "실제 종료 시각 (HH:mm)"
+          },
+          {
+            "name": "durationMinutes",
+            "type": "Integer",
+            "required": false,
+            "description": "실제 소요 시간 (분)"
+          },
+          {
+            "name": "status",
+            "type": "Enum",
+            "required": true,
+            "description": "공정 상태",
+            "enumValues": [
+              "waiting",
+              "in_progress",
+              "completed"
+            ]
+          },
+          {
+            "name": "createdDate",
+            "type": "DateTime",
+            "required": true,
+            "description": "생성 일시"
+          }
+        ],
+        "userStories": [
+          "US-201"
+        ],
+        "relatedEntities": [
+          "ProductionPlan",
+          "Equipment"
+        ]
+      },
+      {
+        "name": "Production",
+        "businessName": "생산 실적",
+        "description": "MES를 통해 기록된 실제 생산 결과",
+        "category": "production",
+        "attributes": [
+          {
+            "name": "id",
+            "type": "UUID",
+            "required": true,
+            "description": "생산 고유 식별자"
+          },
+          {
+            "name": "productionNumber",
+            "type": "String",
+            "required": true,
+            "description": "생산번호"
+          },
+          {
+            "name": "productionDate",
+            "type": "DateTime",
+            "required": true,
+            "description": "생산 일자"
+          },
+          {
+            "name": "salesOrderId",
+            "type": "UUID",
+            "required": true,
+            "description": "수주 ID (FK: SalesOrder)",
+            "references": {
+              "entity": "SalesOrder",
+              "attribute": "id",
+              "relationshipId": "rel-5",
+              "onDelete": "RESTRICT",
+              "onUpdate": "CASCADE",
+              "description": "외래키 - SalesOrder의 id를 참조"
+            }
+          },
+          {
+            "name": "equipmentId",
+            "type": "UUID",
+            "required": false,
+            "description": "설비 ID (FK: Equipment)"
+          },
+          {
+            "name": "workerId",
+            "type": "UUID",
+            "required": false,
+            "description": "작업자 ID (FK: Worker)"
+          },
+          {
+            "name": "processCode",
+            "type": "String",
+            "required": false,
+            "description": "공정 코드"
+          },
+          {
+            "name": "startTime",
+            "type": "DateTime",
+            "required": true,
+            "description": "시작 시각"
+          },
+          {
+            "name": "endTime",
+            "type": "DateTime",
+            "required": true,
+            "description": "종료 시각"
+          },
+          {
+            "name": "plannedQuantity",
+            "type": "Integer",
+            "required": true,
+            "description": "지시 수량"
+          },
+          {
+            "name": "producedQuantity",
+            "type": "Integer",
+            "required": true,
+            "description": "생산 수량"
+          },
+          {
+            "name": "defectQuantity",
+            "type": "Integer",
+            "required": false,
+            "description": "불량 수량"
+          },
+          {
+            "name": "defectReason",
+            "type": "Enum",
+            "required": false,
+            "description": "불량 사유",
+            "enumValues": [
+              "설비오류",
+              "자재불량",
+              "작업오류",
+              "기타"
+            ]
+          },
+          {
+            "name": "storageLocation",
+            "type": "String",
+            "required": false,
+            "description": "적재 장소"
+          },
+          {
+            "name": "status",
+            "type": "Enum",
+            "required": true,
+            "description": "생산 상태",
+            "enumValues": [
+              "waiting",
+              "in_progress",
+              "completed",
+              "cancelled"
+            ]
+          },
+          {
+            "name": "createdDate",
+            "type": "DateTime",
+            "required": true,
+            "description": "생성 일시"
+          }
+        ],
+        "userStories": [
+          "US-103",
+          "US-104",
+          "US-202",
+          "US-203"
+        ],
+        "relatedEntities": [
+          "SalesOrder",
+          "Equipment"
+        ]
+      },
+      {
+        "name": "Equipment",
+        "businessName": "설비",
+        "description": "생산에 사용되는 설비 정보",
+        "category": "master",
+        "attributes": [
+          {
+            "name": "id",
+            "type": "UUID",
+            "required": true,
+            "description": "설비 고유 식별자"
+          },
+          {
+            "name": "code",
+            "type": "String",
+            "required": true,
+            "description": "설비 코드"
+          },
+          {
+            "name": "name",
+            "type": "String",
+            "required": true,
+            "description": "설비명"
+          },
+          {
+            "name": "equipmentType",
+            "type": "Enum",
+            "required": true,
+            "description": "설비 유형",
+            "enumValues": [
+              "인쇄",
+              "재단",
+              "코팅",
+              "톰슨",
+              "풀칠",
+              "접기"
+            ]
+          },
+          {
+            "name": "manufacturer",
+            "type": "String",
+            "required": false,
+            "description": "제조사"
+          },
+          {
+            "name": "model",
+            "type": "String",
+            "required": false,
+            "description": "모델명"
+          },
+          {
+            "name": "serialNumber",
+            "type": "String",
+            "required": false,
+            "description": "시리얼 번호"
+          },
+          {
+            "name": "purchaseDate",
+            "type": "DateTime",
+            "required": false,
+            "description": "구입 일자"
+          },
+          {
+            "name": "status",
+            "type": "Enum",
+            "required": true,
+            "description": "설비 상태",
+            "enumValues": [
+              "active",
+              "maintenance",
+              "inactive"
+            ]
+          },
+          {
+            "name": "createdDate",
+            "type": "DateTime",
+            "required": true,
+            "description": "생성 일시"
+          }
+        ],
+        "userStories": [
+          "US-201",
+          "US-202"
+        ],
+        "relatedEntities": [
+          "Production",
+          "ProcessStep"
+        ]
+      },
+      {
+        "name": "PaperCode",
+        "businessName": "원단 코드",
+        "description": "골판지 원단 종류별 코드 및 스펙",
+        "category": "master",
+        "attributes": [
+          {
+            "name": "id",
+            "type": "UUID",
+            "required": true,
+            "description": "원단코드 고유 식별자"
+          },
+          {
+            "name": "code",
+            "type": "String",
+            "required": true,
+            "description": "원단 코드"
+          },
+          {
+            "name": "name",
+            "type": "String",
+            "required": true,
+            "description": "원단명"
+          },
+          {
+            "name": "fluteType",
+            "type": "Enum",
+            "required": true,
+            "description": "골 종류",
+            "enumValues": [
+              "E골",
+              "B골",
+              "BB골",
+              "EB골"
+            ]
+          },
+          {
+            "name": "surfacePaper",
+            "type": "String",
+            "required": false,
+            "description": "표면 원지"
+          },
+          {
+            "name": "middlePaper",
+            "type": "String",
+            "required": false,
+            "description": "중심층 원지"
+          },
+          {
+            "name": "linerPaper",
+            "type": "String",
+            "required": false,
+            "description": "이면 원지"
+          },
+          {
+            "name": "weight",
+            "type": "Integer",
+            "required": false,
+            "description": "평량 (g/m²)"
+          },
+          {
+            "name": "standardPrice",
+            "type": "Float",
+            "required": false,
+            "description": "표준 단가"
+          },
+          {
+            "name": "isActive",
+            "type": "Boolean",
+            "required": false,
+            "description": "활성 상태"
+          },
+          {
+            "name": "createdDate",
+            "type": "DateTime",
+            "required": true,
+            "description": "생성 일시"
+          }
+        ],
+        "userStories": [],
+        "relatedEntities": [
+          "BoxProduct"
+        ]
+      },
+      {
+        "name": "Manila",
+        "businessName": "마닐라",
+        "description": "마닐라지 종류별 코드 및 스펙",
+        "category": "master",
+        "attributes": [
+          {
+            "name": "id",
+            "type": "UUID",
+            "required": true,
+            "description": "마닐라 고유 식별자"
+          },
+          {
+            "name": "code",
+            "type": "String",
+            "required": true,
+            "description": "마닐라 코드"
+          },
+          {
+            "name": "name",
+            "type": "String",
+            "required": true,
+            "description": "마닐라명"
+          },
+          {
+            "name": "weight",
+            "type": "Integer",
+            "required": false,
+            "description": "평량 (g/m²)"
+          },
+          {
+            "name": "standardPrice",
+            "type": "Float",
+            "required": false,
+            "description": "표준 단가"
+          },
+          {
+            "name": "isActive",
+            "type": "Boolean",
+            "required": false,
+            "description": "활성 상태"
+          },
+          {
+            "name": "createdDate",
+            "type": "DateTime",
+            "required": true,
+            "description": "생성 일시"
+          }
+        ],
+        "userStories": [],
+        "relatedEntities": [
+          "BoxProduct"
+        ]
+      },
+      {
+        "name": "PurchaseOrder",
+        "businessName": "발주",
+        "description": "자재 및 외주 가공 발주",
+        "category": "procurement",
+        "attributes": [
+          {
+            "name": "id",
+            "type": "UUID",
+            "required": true,
+            "description": "발주 고유 식별자"
+          },
+          {
+            "name": "orderNumber",
+            "type": "String",
+            "required": true,
+            "description": "발주번호"
+          },
+          {
+            "name": "orderDate",
+            "type": "DateTime",
+            "required": true,
+            "description": "발주 일자"
+          },
+          {
+            "name": "partnerId",
+            "type": "UUID",
+            "required": true,
+            "description": "공급처 ID (FK: Partner)",
+            "references": {
+              "entity": "Partner",
+              "attribute": "id",
+              "relationshipId": "rel-2",
+              "onDelete": "RESTRICT",
+              "onUpdate": "CASCADE",
+              "description": "외래키 - Partner의 id를 참조"
+            }
+          },
+          {
+            "name": "orderType",
+            "type": "Enum",
+            "required": true,
+            "description": "발주 유형",
+            "enumValues": [
+              "manila",
+              "paper",
+              "outsourcing",
+              "general"
+            ]
+          },
+          {
+            "name": "expectedDate",
+            "type": "DateTime",
+            "required": false,
+            "description": "예상 납기일"
+          },
+          {
+            "name": "items",
+            "type": "Array[PurchaseOrderItem]",
+            "required": true,
+            "description": "발주 품목"
+          },
+          {
+            "name": "subtotal",
+            "type": "Float",
+            "required": true,
+            "description": "공급가액"
+          },
+          {
+            "name": "taxAmount",
+            "type": "Float",
+            "required": true,
+            "description": "세액"
+          },
+          {
+            "name": "totalAmount",
+            "type": "Float",
+            "required": true,
+            "description": "합계액"
+          },
+          {
+            "name": "status",
+            "type": "Enum",
+            "required": true,
+            "description": "발주 상태",
+            "enumValues": [
+              "draft",
+              "ordered",
+              "partial",
+              "received",
+              "cancelled"
+            ]
+          },
+          {
+            "name": "relatedSalesOrderId",
+            "type": "UUID",
+            "required": false,
+            "description": "관련 수주 ID (FK: SalesOrder)"
+          },
+          {
+            "name": "notes",
+            "type": "String",
+            "required": false,
+            "description": "비고"
+          },
+          {
+            "name": "createdDate",
+            "type": "DateTime",
+            "required": true,
+            "description": "생성 일시"
+          }
+        ],
+        "userStories": [
+          "US-401",
+          "US-402",
+          "US-403"
+        ],
+        "relatedEntities": [
+          "Partner",
+          "PurchaseOrderItem",
+          "Receiving"
+        ]
+      },
+      {
+        "name": "PurchaseOrderItem",
+        "businessName": "발주 품목",
+        "description": "발주에 포함된 자재 품목",
+        "category": "procurement",
+        "attributes": [
+          {
+            "name": "id",
+            "type": "UUID",
+            "required": true,
+            "description": "발주품목 고유 식별자"
+          },
+          {
+            "name": "purchaseOrderId",
+            "type": "UUID",
+            "required": true,
+            "description": "발주 ID (FK: PurchaseOrder)",
+            "references": {
+              "entity": "PurchaseOrder",
+              "attribute": "id",
+              "relationshipId": "rel-13",
+              "onDelete": "CASCADE",
+              "onUpdate": "CASCADE",
+              "description": "외래키 - PurchaseOrder의 id를 참조"
+            }
+          },
+          {
+            "name": "materialCode",
+            "type": "String",
+            "required": false,
+            "description": "자재 코드"
+          },
+          {
+            "name": "materialName",
+            "type": "String",
+            "required": true,
+            "description": "자재명"
+          },
+          {
+            "name": "specification",
+            "type": "String",
+            "required": false,
+            "description": "규격"
+          },
+          {
+            "name": "quantity",
+            "type": "Integer",
+            "required": true,
+            "description": "수량"
+          },
+          {
+            "name": "unit",
+            "type": "String",
+            "required": true,
+            "description": "단위"
+          },
+          {
+            "name": "unitPrice",
+            "type": "Float",
+            "required": true,
+            "description": "단가"
+          },
+          {
+            "name": "amount",
+            "type": "Float",
+            "required": true,
+            "description": "금액"
+          },
+          {
+            "name": "receivedQuantity",
+            "type": "Integer",
+            "required": false,
+            "description": "입고 수량"
+          },
+          {
+            "name": "createdDate",
+            "type": "DateTime",
+            "required": true,
+            "description": "생성 일시"
+          }
+        ],
+        "userStories": [
+          "US-401"
+        ],
+        "relatedEntities": [
+          "PurchaseOrder"
+        ]
+      },
+      {
+        "name": "Receiving",
+        "businessName": "입고",
+        "description": "발주된 자재 입고 기록",
+        "category": "procurement",
+        "attributes": [
+          {
+            "name": "id",
+            "type": "UUID",
+            "required": true,
+            "description": "입고 고유 식별자"
+          },
+          {
+            "name": "receivingNumber",
+            "type": "String",
+            "required": true,
+            "description": "입고번호"
+          },
+          {
+            "name": "receivingDate",
+            "type": "DateTime",
+            "required": true,
+            "description": "입고 일자"
+          },
+          {
+            "name": "purchaseOrderId",
+            "type": "UUID",
+            "required": false,
+            "description": "발주 ID (FK: PurchaseOrder)",
+            "references": {
+              "entity": "PurchaseOrder",
+              "attribute": "id",
+              "relationshipId": "rel-14",
+              "onDelete": "SET NULL",
+              "onUpdate": "CASCADE",
+              "description": "외래키 - PurchaseOrder의 id를 참조"
+            }
+          },
+          {
+            "name": "partnerId",
+            "type": "UUID",
+            "required": true,
+            "description": "공급처 ID (FK: Partner)"
+          },
+          {
+            "name": "receivingType",
+            "type": "Enum",
+            "required": true,
+            "description": "입고 유형",
+            "enumValues": [
+              "manila",
+              "paper",
+              "outsourcing",
+              "general"
+            ]
+          },
+          {
+            "name": "warehouseId",
+            "type": "UUID",
+            "required": false,
+            "description": "창고 ID (FK: Warehouse)"
+          },
+          {
+            "name": "items",
+            "type": "Array[ReceivingItem]",
+            "required": true,
+            "description": "입고 품목"
+          },
+          {
+            "name": "subtotal",
+            "type": "Float",
+            "required": true,
+            "description": "공급가액"
+          },
+          {
+            "name": "taxAmount",
+            "type": "Float",
+            "required": true,
+            "description": "세액"
+          },
+          {
+            "name": "totalAmount",
+            "type": "Float",
+            "required": true,
+            "description": "합계액"
+          },
+          {
+            "name": "status",
+            "type": "Enum",
+            "required": true,
+            "description": "입고 상태",
+            "enumValues": [
+              "pending",
+              "inspected",
+              "completed"
+            ]
+          },
+          {
+            "name": "notes",
+            "type": "String",
+            "required": false,
+            "description": "비고"
+          },
+          {
+            "name": "createdDate",
+            "type": "DateTime",
+            "required": true,
+            "description": "생성 일시"
+          }
+        ],
+        "userStories": [
+          "US-403"
+        ],
+        "relatedEntities": [
+          "PurchaseOrder",
+          "Partner",
+          "Warehouse",
+          "Inventory"
+        ]
+      },
+      {
+        "name": "ReceivingItem",
+        "businessName": "입고 품목",
+        "description": "입고에 포함된 자재 품목",
+        "category": "procurement",
+        "attributes": [
+          {
+            "name": "id",
+            "type": "UUID",
+            "required": true,
+            "description": "입고품목 고유 식별자"
+          },
+          {
+            "name": "receivingId",
+            "type": "UUID",
+            "required": true,
+            "description": "입고 ID (FK: Receiving)",
+            "references": {
+              "entity": "Receiving",
+              "attribute": "id",
+              "relationshipId": "rel-15",
+              "onDelete": "CASCADE",
+              "onUpdate": "CASCADE",
+              "description": "외래키 - Receiving의 id를 참조"
+            }
+          },
+          {
+            "name": "materialCode",
+            "type": "String",
+            "required": false,
+            "description": "자재 코드"
+          },
+          {
+            "name": "materialName",
+            "type": "String",
+            "required": true,
+            "description": "자재명"
+          },
+          {
+            "name": "orderedQuantity",
+            "type": "Integer",
+            "required": false,
+            "description": "발주 수량"
+          },
+          {
+            "name": "receivedQuantity",
+            "type": "Integer",
+            "required": true,
+            "description": "입고 수량"
+          },
+          {
+            "name": "unit",
+            "type": "String",
+            "required": true,
+            "description": "단위"
+          },
+          {
+            "name": "unitPrice",
+            "type": "Float",
+            "required": true,
+            "description": "단가"
+          },
+          {
+            "name": "amount",
+            "type": "Float",
+            "required": true,
+            "description": "금액"
+          },
+          {
+            "name": "inspectionResult",
+            "type": "Enum",
+            "required": false,
+            "description": "검수 결과",
+            "enumValues": [
+              "pass",
+              "fail",
+              "partial"
+            ]
+          },
+          {
+            "name": "defectQuantity",
+            "type": "Integer",
+            "required": false,
+            "description": "불량 수량"
+          },
+          {
+            "name": "defectReason",
+            "type": "String",
+            "required": false,
+            "description": "불량 사유"
+          },
+          {
+            "name": "createdDate",
+            "type": "DateTime",
+            "required": true,
+            "description": "생성 일시"
+          }
+        ],
+        "userStories": [
+          "US-403"
+        ],
+        "relatedEntities": [
+          "Receiving"
+        ]
+      },
+      {
+        "name": "Inventory",
+        "businessName": "재고",
+        "description": "자재 및 완제품 재고 현황",
+        "category": "inventory",
+        "attributes": [
+          {
+            "name": "id",
+            "type": "UUID",
+            "required": true,
+            "description": "재고 고유 식별자"
+          },
+          {
+            "name": "productCode",
+            "type": "String",
+            "required": true,
+            "description": "제품/자재 코드"
+          },
+          {
+            "name": "productName",
+            "type": "String",
+            "required": true,
+            "description": "제품/자재명"
+          },
+          {
+            "name": "warehouseId",
+            "type": "UUID",
+            "required": false,
+            "description": "창고 ID (FK: Warehouse)",
+            "references": {
+              "entity": "Warehouse",
+              "attribute": "id",
+              "relationshipId": "rel-17",
+              "onDelete": "SET NULL",
+              "onUpdate": "CASCADE",
+              "description": "외래키 - Warehouse의 id를 참조"
+            }
+          },
+          {
+            "name": "location",
+            "type": "String",
+            "required": false,
+            "description": "보관 위치"
+          },
+          {
+            "name": "quantity",
+            "type": "Integer",
+            "required": true,
+            "description": "수량"
+          },
+          {
+            "name": "unit",
+            "type": "String",
+            "required": true,
+            "description": "단위"
+          },
+          {
+            "name": "unitCost",
+            "type": "Float",
+            "required": false,
+            "description": "단가"
+          },
+          {
+            "name": "totalValue",
+            "type": "Float",
+            "required": false,
+            "description": "재고 가치"
+          },
+          {
+            "name": "minimumQuantity",
+            "type": "Integer",
+            "required": false,
+            "description": "안전 재고 수량"
+          },
+          {
+            "name": "lastMovementDate",
+            "type": "DateTime",
+            "required": false,
+            "description": "마지막 이동 일자"
+          },
+          {
+            "name": "createdDate",
+            "type": "DateTime",
+            "required": true,
+            "description": "생성 일시"
+          }
+        ],
+        "userStories": [
+          "US-404"
+        ],
+        "relatedEntities": [
+          "Warehouse",
+          "Receiving"
+        ]
+      },
+      {
+        "name": "Warehouse",
+        "businessName": "창고",
+        "description": "자재 및 완제품 보관 창고",
+        "category": "master",
+        "attributes": [
+          {
+            "name": "id",
+            "type": "UUID",
+            "required": true,
+            "description": "창고 고유 식별자"
+          },
+          {
+            "name": "code",
+            "type": "String",
+            "required": true,
+            "description": "창고 코드"
+          },
+          {
+            "name": "name",
+            "type": "String",
+            "required": true,
+            "description": "창고명"
+          },
+          {
+            "name": "address",
+            "type": "String",
+            "required": false,
+            "description": "주소"
+          },
+          {
+            "name": "managerName",
+            "type": "String",
+            "required": false,
+            "description": "담당자명"
+          },
+          {
+            "name": "managerPhone",
+            "type": "String",
+            "required": false,
+            "description": "담당자 연락처"
+          },
+          {
+            "name": "isActive",
+            "type": "Boolean",
+            "required": false,
+            "description": "활성 상태"
+          },
+          {
+            "name": "createdDate",
+            "type": "DateTime",
+            "required": true,
+            "description": "생성 일시"
+          }
+        ],
+        "userStories": [
+          "US-403",
+          "US-404"
+        ],
+        "relatedEntities": [
+          "Inventory",
+          "Receiving"
+        ]
+      },
+      {
+        "name": "Delivery",
+        "businessName": "납품",
+        "description": "완성된 제품의 고객 납품 기록",
+        "category": "sales",
+        "attributes": [
+          {
+            "name": "id",
+            "type": "UUID",
+            "required": true,
+            "description": "납품 고유 식별자"
+          },
+          {
+            "name": "deliveryNumber",
+            "type": "String",
+            "required": true,
+            "description": "납품번호"
+          },
+          {
+            "name": "deliveryDate",
+            "type": "DateTime",
+            "required": true,
+            "description": "납품 일자"
+          },
+          {
+            "name": "salesOrderId",
+            "type": "UUID",
+            "required": true,
+            "description": "수주 ID (FK: SalesOrder)",
+            "references": {
+              "entity": "SalesOrder",
+              "attribute": "id",
+              "relationshipId": "rel-6",
+              "onDelete": "RESTRICT",
+              "onUpdate": "CASCADE",
+              "description": "외래키 - SalesOrder의 id를 참조"
+            }
+          },
+          {
+            "name": "partnerId",
+            "type": "UUID",
+            "required": true,
+            "description": "거래처 ID (FK: Partner)"
+          },
+          {
+            "name": "deliveryLocation",
+            "type": "String",
+            "required": false,
+            "description": "납품지"
+          },
+          {
+            "name": "vehicleId",
+            "type": "UUID",
+            "required": false,
+            "description": "차량 ID"
+          },
+          {
+            "name": "driverName",
+            "type": "String",
+            "required": false,
+            "description": "운전자명"
+          },
+          {
+            "name": "items",
+            "type": "Array[DeliveryItem]",
+            "required": true,
+            "description": "납품 품목"
+          },
+          {
+            "name": "palletOut",
+            "type": "Array[PalletOut]",
+            "required": false,
+            "description": "출고 파렛트"
+          },
+          {
+            "name": "subtotal",
+            "type": "Float",
+            "required": true,
+            "description": "공급가액"
+          },
+          {
+            "name": "taxAmount",
+            "type": "Float",
+            "required": true,
+            "description": "세액"
+          },
+          {
+            "name": "totalAmount",
+            "type": "Float",
+            "required": true,
+            "description": "합계액"
+          },
+          {
+            "name": "status",
+            "type": "Enum",
+            "required": true,
+            "description": "납품 상태",
+            "enumValues": [
+              "pending",
+              "in_transit",
+              "delivered",
+              "cancelled"
+            ]
+          },
+          {
+            "name": "createdDate",
+            "type": "DateTime",
+            "required": true,
+            "description": "생성 일시"
+          }
+        ],
+        "userStories": [
+          "US-305"
+        ],
+        "relatedEntities": [
+          "SalesOrder",
+          "Partner",
+          "DeliveryItem"
+        ]
+      },
+      {
+        "name": "DeliveryItem",
+        "businessName": "납품 품목",
+        "description": "납품에 포함된 개별 품목",
+        "category": "sales",
+        "attributes": [
+          {
+            "name": "id",
+            "type": "UUID",
+            "required": true,
+            "description": "납품품목 고유 식별자"
+          },
+          {
+            "name": "deliveryId",
+            "type": "UUID",
+            "required": true,
+            "description": "납품 ID (FK: Delivery)",
+            "references": {
+              "entity": "Delivery",
+              "attribute": "id",
+              "relationshipId": "rel-18",
+              "onDelete": "CASCADE",
+              "onUpdate": "CASCADE",
+              "description": "외래키 - Delivery의 id를 참조"
+            }
+          },
+          {
+            "name": "productCode",
+            "type": "String",
+            "required": false,
+            "description": "제품 코드"
+          },
+          {
+            "name": "productName",
+            "type": "String",
+            "required": true,
+            "description": "제품명"
+          },
+          {
+            "name": "orderedQuantity",
+            "type": "Integer",
+            "required": false,
+            "description": "수주 수량"
+          },
+          {
+            "name": "deliveredQuantity",
+            "type": "Integer",
+            "required": true,
+            "description": "납품 수량"
+          },
+          {
+            "name": "unit",
+            "type": "String",
+            "required": true,
+            "description": "단위"
+          },
+          {
+            "name": "unitPrice",
+            "type": "Float",
+            "required": true,
+            "description": "단가"
+          },
+          {
+            "name": "amount",
+            "type": "Float",
+            "required": true,
+            "description": "금액"
+          },
+          {
+            "name": "createdDate",
+            "type": "DateTime",
+            "required": true,
+            "description": "생성 일시"
+          }
+        ],
+        "userStories": [
+          "US-305"
+        ],
+        "relatedEntities": [
+          "Delivery"
+        ]
+      },
+      {
+        "name": "Invoice",
+        "businessName": "계산서",
+        "description": "고객에게 발행하는 매출 계산서",
+        "category": "financial",
+        "attributes": [
+          {
+            "name": "id",
+            "type": "UUID",
+            "required": true,
+            "description": "계산서 고유 식별자"
+          },
+          {
+            "name": "invoiceNumber",
+            "type": "String",
+            "required": true,
+            "description": "계산서번호"
+          },
+          {
+            "name": "invoiceDate",
+            "type": "DateTime",
+            "required": true,
+            "description": "발행일"
+          },
+          {
+            "name": "dueDate",
+            "type": "DateTime",
+            "required": false,
+            "description": "지급 기한"
+          },
+          {
+            "name": "partnerId",
+            "type": "UUID",
+            "required": true,
+            "description": "거래처 ID (FK: Partner)"
+          },
+          {
+            "name": "salesOrderId",
+            "type": "UUID",
+            "required": false,
+            "description": "수주 ID (FK: SalesOrder)",
+            "references": {
+              "entity": "SalesOrder",
+              "attribute": "id",
+              "relationshipId": "rel-7",
+              "onDelete": "RESTRICT",
+              "onUpdate": "CASCADE",
+              "description": "외래키 - SalesOrder의 id를 참조"
+            }
+          },
+          {
+            "name": "items",
+            "type": "Array[InvoiceItem]",
+            "required": true,
+            "description": "계산서 품목"
+          },
+          {
+            "name": "subtotal",
+            "type": "Float",
+            "required": true,
+            "description": "공급가액"
+          },
+          {
+            "name": "taxAmount",
+            "type": "Float",
+            "required": true,
+            "description": "세액"
+          },
+          {
+            "name": "discountAmount",
+            "type": "Float",
+            "required": false,
+            "description": "할인액"
+          },
+          {
+            "name": "totalAmount",
+            "type": "Float",
+            "required": true,
+            "description": "합계액"
+          },
+          {
+            "name": "paidAmount",
+            "type": "Float",
+            "required": false,
+            "description": "지급액"
+          },
+          {
+            "name": "status",
+            "type": "Enum",
+            "required": true,
+            "description": "계산서 상태",
+            "enumValues": [
+              "draft",
+              "issued",
+              "sent",
+              "partial",
+              "paid",
+              "overdue",
+              "cancelled"
+            ]
+          },
+          {
+            "name": "notes",
+            "type": "String",
+            "required": false,
+            "description": "비고"
+          },
+          {
+            "name": "createdDate",
+            "type": "DateTime",
+            "required": true,
+            "description": "생성 일시"
+          }
+        ],
+        "userStories": [
+          "US-501"
+        ],
+        "relatedEntities": [
+          "Partner",
+          "SalesOrder",
+          "InvoiceItem"
+        ]
+      },
+      {
+        "name": "InvoiceItem",
+        "businessName": "계산서 품목",
+        "description": "계산서에 포함된 개별 품목",
+        "category": "financial",
+        "attributes": [
+          {
+            "name": "id",
+            "type": "UUID",
+            "required": true,
+            "description": "계산서품목 고유 식별자"
+          },
+          {
+            "name": "invoiceId",
+            "type": "UUID",
+            "required": true,
+            "description": "계산서 ID (FK: Invoice)",
+            "references": {
+              "entity": "Invoice",
+              "attribute": "id",
+              "relationshipId": "rel-19",
+              "onDelete": "CASCADE",
+              "onUpdate": "CASCADE",
+              "description": "외래키 - Invoice의 id를 참조"
+            }
+          },
+          {
+            "name": "productName",
+            "type": "String",
+            "required": true,
+            "description": "제품명"
+          },
+          {
+            "name": "description",
+            "type": "String",
+            "required": false,
+            "description": "설명"
+          },
+          {
+            "name": "quantity",
+            "type": "Integer",
+            "required": true,
+            "description": "수량"
+          },
+          {
+            "name": "unit",
+            "type": "String",
+            "required": true,
+            "description": "단위"
+          },
+          {
+            "name": "unitPrice",
+            "type": "Float",
+            "required": true,
+            "description": "단가"
+          },
+          {
+            "name": "amount",
+            "type": "Float",
+            "required": true,
+            "description": "금액"
+          },
+          {
+            "name": "taxRate",
+            "type": "Float",
+            "required": false,
+            "description": "세율 (%)"
+          },
+          {
+            "name": "taxAmount",
+            "type": "Float",
+            "required": false,
+            "description": "세액"
+          },
+          {
+            "name": "createdDate",
+            "type": "DateTime",
+            "required": true,
+            "description": "생성 일시"
+          }
+        ],
+        "userStories": [
+          "US-501"
+        ],
+        "relatedEntities": [
+          "Invoice"
+        ]
+      },
+      {
+        "name": "Payment",
+        "businessName": "수금/지불",
+        "description": "거래처와의 현금 거래 기록",
+        "category": "financial",
+        "attributes": [
+          {
+            "name": "id",
+            "type": "UUID",
+            "required": true,
+            "description": "수금/지불 고유 식별자"
+          },
+          {
+            "name": "paymentNumber",
+            "type": "String",
+            "required": true,
+            "description": "거래번호"
+          },
+          {
+            "name": "paymentDate",
+            "type": "DateTime",
+            "required": true,
+            "description": "거래 일자"
+          },
+          {
+            "name": "partnerId",
+            "type": "UUID",
+            "required": true,
+            "description": "거래처 ID (FK: Partner)",
+            "references": {
+              "entity": "Partner",
+              "attribute": "id",
+              "relationshipId": "rel-20",
+              "onDelete": "RESTRICT",
+              "onUpdate": "CASCADE",
+              "description": "외래키 - Partner의 id를 참조"
+            }
+          },
+          {
+            "name": "paymentType",
+            "type": "Enum",
+            "required": true,
+            "description": "거래 유형 (수금/지불)",
+            "enumValues": [
+              "collection",
+              "payment"
+            ]
+          },
+          {
+            "name": "paymentMethod",
+            "type": "Enum",
+            "required": true,
+            "description": "결제 수단",
+            "enumValues": [
+              "cash",
+              "bank_transfer",
+              "check",
+              "note"
+            ]
+          },
+          {
+            "name": "amount",
+            "type": "Float",
+            "required": true,
+            "description": "금액"
+          },
+          {
+            "name": "referenceDocuments",
+            "type": "Array[String]",
+            "required": false,
+            "description": "관련 계산서번호 목록"
+          },
+          {
+            "name": "notes",
+            "type": "String",
+            "required": false,
+            "description": "비고"
+          },
+          {
+            "name": "createdDate",
+            "type": "DateTime",
+            "required": true,
+            "description": "생성 일시"
+          }
+        ],
+        "userStories": [
+          "US-502"
+        ],
+        "relatedEntities": [
+          "Partner",
+          "Invoice"
+        ]
+      },
+      {
+        "name": "AccountsReceivable",
+        "businessName": "미수금 현황",
+        "description": "거래처별 미수금 현황",
+        "category": "financial",
+        "attributes": [
+          {
+            "name": "id",
+            "type": "UUID",
+            "required": true,
+            "description": "미수금 고유 식별자"
+          },
+          {
+            "name": "partnerId",
+            "type": "UUID",
+            "required": true,
+            "description": "거래처 ID (FK: Partner)",
+            "references": {
+              "entity": "Partner",
+              "attribute": "id",
+              "relationshipId": "rel-21",
+              "onDelete": "CASCADE",
+              "onUpdate": "CASCADE",
+              "description": "외래키 - Partner의 id를 참조"
+            }
+          },
+          {
+            "name": "partnerName",
+            "type": "String",
+            "required": true,
+            "description": "거래처명"
+          },
+          {
+            "name": "totalAmount",
+            "type": "Float",
+            "required": true,
+            "description": "총 미수금액"
+          },
+          {
+            "name": "invoiceDetails",
+            "type": "Array[InvoiceDetail]",
+            "required": true,
+            "description": "계산서별 미수금 상세"
+          },
+          {
+            "name": "lastUpdateDate",
+            "type": "DateTime",
+            "required": true,
+            "description": "마지막 갱신 일시"
+          }
+        ],
+        "userStories": [
+          "US-503"
+        ],
+        "relatedEntities": [
+          "Partner",
+          "Invoice"
+        ]
+      },
+      {
+        "name": "AccountsPayable",
+        "businessName": "미지급금 현황",
+        "description": "거래처별 미지급금 현황",
+        "category": "financial",
+        "attributes": [
+          {
+            "name": "id",
+            "type": "UUID",
+            "required": true,
+            "description": "미지급금 고유 식별자"
+          },
+          {
+            "name": "supplierId",
+            "type": "UUID",
+            "required": true,
+            "description": "공급처 ID (FK: Partner)"
+          },
+          {
+            "name": "supplierName",
+            "type": "String",
+            "required": true,
+            "description": "공급처명"
+          },
+          {
+            "name": "totalAmount",
+            "type": "Float",
+            "required": true,
+            "description": "총 미지급금액"
+          },
+          {
+            "name": "billDetails",
+            "type": "Array[BillDetail]",
+            "required": true,
+            "description": "청구서별 미지급금 상세"
+          },
+          {
+            "name": "lastUpdateDate",
+            "type": "DateTime",
+            "required": true,
+            "description": "마지막 갱신 일시"
+          }
+        ],
+        "userStories": [
+          "US-503"
+        ],
+        "relatedEntities": [
+          "Partner"
+        ]
+      },
+      {
+        "name": "CompanyProfile",
+        "businessName": "회사 설정",
+        "description": "회사 기본 정보 설정",
+        "category": "settings",
+        "attributes": [
+          {
+            "name": "id",
+            "type": "UUID",
+            "required": true,
+            "description": "회사 고유 식별자"
+          },
+          {
+            "name": "companyName",
+            "type": "String",
+            "required": true,
+            "description": "회사명"
+          },
+          {
+            "name": "businessNumber",
+            "type": "String",
+            "required": false,
+            "description": "사업자번호"
+          },
+          {
+            "name": "representative",
+            "type": "String",
+            "required": false,
+            "description": "대표자명"
+          },
+          {
+            "name": "address",
+            "type": "String",
+            "required": false,
+            "description": "주소"
+          },
+          {
+            "name": "phone",
+            "type": "String",
+            "required": false,
+            "description": "연락처"
+          },
+          {
+            "name": "email",
+            "type": "String",
+            "required": false,
+            "description": "이메일"
+          },
+          {
+            "name": "bankName",
+            "type": "String",
+            "required": false,
+            "description": "은행명"
+          },
+          {
+            "name": "bankAccount",
+            "type": "String",
+            "required": false,
+            "description": "계좌번호"
+          },
+          {
+            "name": "accountHolder",
+            "type": "String",
+            "required": false,
+            "description": "예금주"
+          },
+          {
+            "name": "taxRate",
+            "type": "Float",
+            "required": false,
+            "description": "기본 세율 (%)"
+          },
+          {
+            "name": "createdDate",
+            "type": "DateTime",
+            "required": true,
+            "description": "생성 일시"
+          }
+        ],
+        "userStories": [
+          "US-702"
+        ],
+        "relatedEntities": []
+      },
+      {
+        "name": "User",
+        "businessName": "사용자",
+        "description": "시스템 사용자 계정",
+        "category": "settings",
+        "attributes": [
+          {
+            "name": "id",
+            "type": "UUID",
+            "required": true,
+            "description": "사용자 고유 식별자"
+          },
+          {
+            "name": "email",
+            "type": "String",
+            "required": true,
+            "description": "이메일 (로그인 ID)"
+          },
+          {
+            "name": "fullName",
+            "type": "String",
+            "required": true,
+            "description": "성명"
+          },
+          {
+            "name": "role",
+            "type": "Enum",
+            "required": true,
+            "description": "역할",
+            "enumValues": [
+              "admin",
+              "manager",
+              "user"
+            ]
+          },
+          {
+            "name": "department",
+            "type": "String",
+            "required": false,
+            "description": "부서"
+          },
+          {
+            "name": "isActive",
+            "type": "Boolean",
+            "required": false,
+            "description": "활성 상태"
+          },
+          {
+            "name": "createdDate",
+            "type": "DateTime",
+            "required": true,
+            "description": "생성 일시"
+          }
+        ],
+        "userStories": [
+          "US-701"
+        ],
+        "relatedEntities": []
+      },
+      {
+        "name": "SalesPerson",
+        "businessName": "영업사원",
+        "description": "영업 담당 사원 정보",
+        "category": "master",
+        "attributes": [
+          {
+            "name": "id",
+            "type": "UUID",
+            "required": true,
+            "description": "영업사원 고유 식별자"
+          },
+          {
+            "name": "code",
+            "type": "String",
+            "required": true,
+            "description": "영업사원 코드"
+          },
+          {
+            "name": "name",
+            "type": "String",
+            "required": true,
+            "description": "성명"
+          },
+          {
+            "name": "department",
+            "type": "String",
+            "required": false,
+            "description": "부서"
+          },
+          {
+            "name": "phone",
+            "type": "String",
+            "required": false,
+            "description": "연락처"
+          },
+          {
+            "name": "email",
+            "type": "String",
+            "required": false,
+            "description": "이메일"
+          },
+          {
+            "name": "commissionRate",
+            "type": "Float",
+            "required": false,
+            "description": "수수료율 (%)"
+          },
+          {
+            "name": "isActive",
+            "type": "Boolean",
+            "required": false,
+            "description": "활성 상태"
+          },
+          {
+            "name": "createdDate",
+            "type": "DateTime",
+            "required": true,
+            "description": "생성 일시"
+          }
+        ],
+        "userStories": [],
+        "relatedEntities": [
+          "SalesOrder"
+        ]
+      },
+      {
+        "name": "ProcessCode",
+        "businessName": "공정 코드",
+        "description": "생산 공정 마스터",
+        "category": "master",
+        "attributes": [
+          {
+            "name": "id",
+            "type": "UUID",
+            "required": true,
+            "description": "공정코드 고유 식별자"
+          },
+          {
+            "name": "code",
+            "type": "String",
+            "required": true,
+            "description": "공정 코드"
+          },
+          {
+            "name": "name",
+            "type": "String",
+            "required": true,
+            "description": "공정명"
+          },
+          {
+            "name": "description",
+            "type": "String",
+            "required": false,
+            "description": "설명"
+          },
+          {
+            "name": "processOrder",
+            "type": "Integer",
+            "required": false,
+            "description": "공정 순서"
+          },
+          {
+            "name": "isActive",
+            "type": "Boolean",
+            "required": false,
+            "description": "활성 상태"
+          },
+          {
+            "name": "createdDate",
+            "type": "DateTime",
+            "required": true,
+            "description": "생성 일시"
+          }
+        ],
+        "userStories": [],
+        "relatedEntities": [
+          "ProcessStep"
+        ]
+      },
+      {
+        "name": "PalletType",
+        "businessName": "파렛트 유형",
+        "description": "파렛트 종류 및 사양",
+        "category": "master",
+        "attributes": [
+          {
+            "name": "id",
+            "type": "UUID",
+            "required": true,
+            "description": "파렛트 유형 고유 식별자"
+          },
+          {
+            "name": "code",
+            "type": "String",
+            "required": true,
+            "description": "파렛트 코드"
+          },
+          {
+            "name": "name",
+            "type": "String",
+            "required": true,
+            "description": "파렛트명"
+          },
+          {
+            "name": "dimensions",
+            "type": "String",
+            "required": false,
+            "description": "규격"
+          },
+          {
+            "name": "material",
+            "type": "String",
+            "required": false,
+            "description": "재질"
+          },
+          {
+            "name": "isActive",
+            "type": "Boolean",
+            "required": false,
+            "description": "활성 상태"
+          },
+          {
+            "name": "createdDate",
+            "type": "DateTime",
+            "required": true,
+            "description": "생성 일시"
+          }
+        ],
+        "userStories": [],
+        "relatedEntities": []
+      },
+      {
+        "name": "BoxProductUnitPrice",
+        "businessName": "박스제품 수량별 단가",
+        "description": "BoxProduct의 수량별 단가 정보 (정규화)",
+        "category": "product",
+        "attributes": [
+          {
+            "name": "id",
+            "type": "UUID",
+            "required": true,
+            "description": "수량별 단가 고유 식별자"
+          },
+          {
+            "name": "boxProductId",
+            "type": "UUID",
+            "required": true,
+            "description": "박스제품 ID (FK)",
+            "references": {
+              "entity": "BoxProduct",
+              "attribute": "id",
+              "relationshipId": "rel-new-1",
+              "onDelete": "CASCADE",
+              "onUpdate": "CASCADE",
+              "description": "외래키 - BoxProduct의 id를 참조"
+            }
+          },
+          {
+            "name": "quantityFrom",
+            "type": "Integer",
+            "required": true,
+            "description": "수량 범위 시작"
+          },
+          {
+            "name": "quantityTo",
+            "type": "Integer",
+            "required": true,
+            "description": "수량 범위 종료"
+          },
+          {
+            "name": "unitPrice",
+            "type": "Float",
+            "required": true,
+            "description": "단가"
+          },
+          {
+            "name": "createdDate",
+            "type": "DateTime",
+            "required": true,
+            "description": "생성 일시"
+          }
+        ],
+        "userStories": [],
+        "relatedEntities": [
+          "BoxProduct"
+        ]
+      },
+      {
+        "name": "BoxProductMaterial",
+        "businessName": "박스제품 자재",
+        "description": "BoxProduct의 자재 스펙 정보 (정규화)",
+        "category": "product",
+        "attributes": [
+          {
+            "name": "id",
+            "type": "UUID",
+            "required": true,
+            "description": "자재 고유 식별자"
+          },
+          {
+            "name": "boxProductId",
+            "type": "UUID",
+            "required": true,
+            "description": "박스제품 ID (FK)",
+            "references": {
+              "entity": "BoxProduct",
+              "attribute": "id",
+              "relationshipId": "rel-new-2",
+              "onDelete": "CASCADE",
+              "onUpdate": "CASCADE",
+              "description": "외래키 - BoxProduct의 id를 참조"
+            }
+          },
+          {
+            "name": "materialCode",
+            "type": "String",
+            "required": true,
+            "description": "자재 코드"
+          },
+          {
+            "name": "materialName",
+            "type": "String",
+            "required": true,
+            "description": "자재명"
+          },
+          {
+            "name": "quantity",
+            "type": "Float",
+            "required": true,
+            "description": "수량"
+          },
+          {
+            "name": "unit",
+            "type": "String",
+            "required": true,
+            "description": "단위",
+            "enumValues": [
+              "kg",
+              "m",
+              "sheet",
+              "pcs",
+              "roll"
+            ]
+          },
+          {
+            "name": "createdDate",
+            "type": "DateTime",
+            "required": true,
+            "description": "생성 일시"
+          }
+        ],
+        "userStories": [],
+        "relatedEntities": [
+          "BoxProduct"
+        ]
+      }
+    ],
+    "relationships": [
+      {
+        "from": "Partner",
+        "to": "SalesOrder",
+        "cardinality": "0:N",
+        "type": "non-identifying",
+        "optional": {
+          "from": true,
+          "to": false
+        },
+        "description": "한 거래처는 여러 수주를 가질 수 있다",
+        "relationshipId": "rel-1",
+        "businessRule": "Cannot delete partner with existing orders to preserve order history"
+      },
+      {
+        "from": "Partner",
+        "to": "PurchaseOrder",
+        "cardinality": "0:N",
+        "type": "non-identifying",
+        "optional": {
+          "from": true,
+          "to": false
+        },
+        "description": "한 공급처는 여러 발주건을 가질 수 있다",
+        "relationshipId": "rel-2",
+        "businessRule": "Cannot delete partner with existing purchase orders"
+      },
+      {
+        "from": "SalesOrder",
+        "to": "SalesOrderItem",
+        "cardinality": "1:N",
+        "type": "identifying",
+        "optional": {
+          "from": false,
+          "to": false
+        },
+        "description": "한 수주는 여러 품목을 포함한다",
+        "relationshipId": "rel-3",
+        "businessRule": "Order must have at least 1 item; items are deleted with order"
+      },
+      {
+        "from": "SalesOrder",
+        "to": "ProductionPlan",
+        "cardinality": "0:N",
+        "type": "non-identifying",
+        "optional": {
+          "from": true,
+          "to": false
+        },
+        "description": "한 수주는 여러 생산 계획을 가질 수 있다",
+        "relationshipId": "rel-4",
+        "businessRule": "Cannot delete order with production plans"
+      },
+      {
+        "from": "SalesOrder",
+        "to": "Production",
+        "cardinality": "0:N",
+        "type": "non-identifying",
+        "optional": {
+          "from": true,
+          "to": false
+        },
+        "description": "한 수주는 여러 생산 실적을 가질 수 있다",
+        "relationshipId": "rel-5",
+        "businessRule": "Production records reference the original sales order"
+      },
+      {
+        "from": "SalesOrder",
+        "to": "Delivery",
+        "cardinality": "0:N",
+        "type": "non-identifying",
+        "optional": {
+          "from": true,
+          "to": false
+        },
+        "description": "한 수주는 여러 번 나누어 납품될 수 있다",
+        "relationshipId": "rel-6",
+        "businessRule": "Delivery records are linked to original order for traceability"
+      },
+      {
+        "from": "SalesOrder",
+        "to": "Invoice",
+        "cardinality": "0:N",
+        "type": "non-identifying",
+        "optional": {
+          "from": true,
+          "to": false
+        },
+        "description": "한 수주는 여러 계산서를 생성할 수 있다",
+        "relationshipId": "rel-7",
+        "businessRule": "Invoice is created from sales order; order history is preserved"
+      },
+      {
+        "from": "SalesOrderItem",
+        "to": "BoxProduct",
+        "cardinality": "N:0-1",
+        "type": "non-identifying",
+        "optional": {
+          "from": true,
+          "to": true
+        },
+        "description": "수주 품목은 박스제품을 참조한다",
+        "relationshipId": "rel-8",
+        "businessRule": "Product reference in order item; prevent product deletion if used"
+      },
+      {
+        "from": "BoxProduct",
+        "to": "PaperCode",
+        "cardinality": "N:0-1",
+        "type": "non-identifying",
+        "optional": {
+          "from": true,
+          "to": true
+        },
+        "description": "박스제품은 원단을 참조한다",
+        "relationshipId": "rel-9",
+        "businessRule": "Product can reference paper code; allow null for flexible specs"
+      },
+      {
+        "from": "BoxProduct",
+        "to": "Manila",
+        "cardinality": "N:0-1",
+        "type": "non-identifying",
+        "optional": {
+          "from": true,
+          "to": true
+        },
+        "description": "박스제품은 마닐라를 참조한다",
+        "relationshipId": "rel-10",
+        "businessRule": "박스제품은 마닐라를 참조한다"
+      },
+      {
+        "from": "ProductionPlan",
+        "to": "ProcessStep",
+        "cardinality": "1:N",
+        "type": "identifying",
+        "optional": {
+          "from": false,
+          "to": false
+        },
+        "description": "한 생산 계획은 여러 공정 단계를 포함한다",
+        "relationshipId": "rel-11",
+        "businessRule": "Process steps depend on production plan; deleted with plan"
+      },
+      {
+        "from": "ProcessStep",
+        "to": "Equipment",
+        "cardinality": "N:0-1",
+        "type": "non-identifying",
+        "optional": {
+          "from": true,
+          "to": true
+        },
+        "description": "공정 단계는 설비를 참조한다",
+        "relationshipId": "rel-12",
+        "businessRule": "공정 단계는 설비를 참조한다"
+      },
+      {
+        "from": "PurchaseOrder",
+        "to": "PurchaseOrderItem",
+        "cardinality": "1:N",
+        "type": "identifying",
+        "optional": {
+          "from": false,
+          "to": false
+        },
+        "description": "한 발주는 여러 품목을 포함한다",
+        "relationshipId": "rel-13",
+        "businessRule": "Order must have at least 1 item; items are deleted with order"
+      },
+      {
+        "from": "PurchaseOrder",
+        "to": "Receiving",
+        "cardinality": "N:0-1",
+        "type": "non-identifying",
+        "optional": {
+          "from": true,
+          "to": true
+        },
+        "description": "한 발주는 여러 번 입고될 수 있다",
+        "relationshipId": "rel-14",
+        "businessRule": "한 발주는 여러 번 입고될 수 있다"
+      },
+      {
+        "from": "Receiving",
+        "to": "ReceivingItem",
+        "cardinality": "1:N",
+        "type": "identifying",
+        "optional": {
+          "from": false,
+          "to": false
+        },
+        "description": "한 입고는 여러 품목을 포함한다",
+        "relationshipId": "rel-15",
+        "businessRule": "한 입고는 여러 품목을 포함한다"
+      },
+      {
+        "from": "Receiving",
+        "to": "Inventory",
+        "cardinality": "0:N",
+        "type": "non-identifying",
+        "optional": {
+          "from": true,
+          "to": false
+        },
+        "description": "입고는 재고를 증가시킨다",
+        "relationshipId": "rel-16",
+        "businessRule": "Receiving creates inventory entries; preserve source tracking"
+      },
+      {
+        "from": "Warehouse",
+        "to": "Inventory",
+        "cardinality": "N:0-1",
+        "type": "non-identifying",
+        "optional": {
+          "from": true,
+          "to": true
+        },
+        "description": "한 창고는 여러 재고를 보유한다",
+        "relationshipId": "rel-17",
+        "businessRule": "한 창고는 여러 재고를 보유한다"
+      },
+      {
+        "from": "Delivery",
+        "to": "DeliveryItem",
+        "cardinality": "1:N",
+        "type": "identifying",
+        "optional": {
+          "from": false,
+          "to": false
+        },
+        "description": "한 납품은 여러 품목을 포함한다",
+        "relationshipId": "rel-18",
+        "businessRule": "한 납품은 여러 품목을 포함한다"
+      },
+      {
+        "from": "Invoice",
+        "to": "InvoiceItem",
+        "cardinality": "1:N",
+        "type": "identifying",
+        "optional": {
+          "from": false,
+          "to": false
+        },
+        "description": "한 계산서는 여러 품목을 포함한다",
+        "relationshipId": "rel-19",
+        "businessRule": "한 계산서는 여러 품목을 포함한다"
+      },
+      {
+        "from": "Partner",
+        "to": "Payment",
+        "cardinality": "0:N",
+        "type": "non-identifying",
+        "optional": {
+          "from": true,
+          "to": false
+        },
+        "description": "한 거래처와는 여러 수금/지불이 발생한다",
+        "relationshipId": "rel-20",
+        "businessRule": "한 거래처와는 여러 수금/지불이 발생한다"
+      },
+      {
+        "from": "Partner",
+        "to": "AccountsReceivable",
+        "cardinality": "0-1:1",
+        "type": "non-identifying",
+        "optional": {
+          "from": true,
+          "to": false
+        },
+        "description": "한 거래처는 한 미수금 현황을 가진다",
+        "relationshipId": "rel-21",
+        "businessRule": "한 거래처는 한 미수금 현황을 가진다"
+      },
+      {
+        "from": "Partner",
+        "to": "AccountsPayable",
+        "cardinality": "0-1:1",
+        "type": "non-identifying",
+        "optional": {
+          "from": true,
+          "to": false
+        },
+        "description": "한 공급처는 한 미지급금 현황을 가진다",
+        "relationshipId": "rel-22",
+        "businessRule": "한 공급처는 한 미지급금 현황을 가진다"
+      },
+      {
+        "from": "BoxProduct",
+        "to": "BoxProductUnitPrice",
+        "cardinality": "1:N",
+        "type": "identifying",
+        "optional": {
+          "from": false,
+          "to": false
+        },
+        "description": "박스제품 수량별 단가 관계 (정규화)",
+        "relationshipId": "rel-new-1",
+        "businessRule": "박스제품 수량별 단가 관계 (정규화)"
+      },
+      {
+        "from": "BoxProduct",
+        "to": "BoxProductMaterial",
+        "cardinality": "0:N",
+        "type": "identifying",
+        "optional": {
+          "from": true,
+          "to": false
+        },
+        "description": "박스제품 자재 관계 (정규화)",
+        "relationshipId": "rel-new-2",
+        "businessRule": "박스제품 자재 관계 (정규화)"
+      }
+    ],
+    "domainRules": [
+      {
+        "id": "DR-001",
+        "name": "거래처 삭제 제약",
+        "description": "활성 주문이 있는 거래처는 삭제할 수 없다",
+        "entities": [
+          "Partner",
+          "SalesOrder",
+          "PurchaseOrder"
+        ],
+        "userStories": [
+          "US-101"
+        ]
+      },
+      {
+        "id": "DR-002",
+        "name": "수주 품목 최소 개수",
+        "description": "수주는 최소 1개 이상의 품목을 포함해야 한다",
+        "entities": [
+          "SalesOrder",
+          "SalesOrderItem"
+        ],
+        "userStories": [
+          "US-102"
+        ]
+      },
+      {
+        "id": "DR-003",
+        "name": "발주 품목 최소 개수",
+        "description": "발주는 최소 1개 이상의 품목을 포함해야 한다",
+        "entities": [
+          "PurchaseOrder",
+          "PurchaseOrderItem"
+        ],
+        "userStories": [
+          "US-103"
+        ]
+      },
+      {
+        "id": "DR-004",
+        "name": "재고 추적",
+        "description": "모든 재고 변동은 입고 기록과 연결되어야 한다",
+        "entities": [
+          "Receiving",
+          "Inventory"
+        ],
+        "userStories": [
+          "US-201"
+        ]
+      },
+      {
+        "id": "DR-005",
+        "name": "생산 실적 추적",
+        "description": "생산 실적은 원본 수주와 반드시 연결되어야 한다",
+        "entities": [
+          "SalesOrder",
+          "Production"
+        ],
+        "userStories": [
+          "US-301"
+        ]
+      },
+      {
+        "id": "DR-006",
+        "name": "배송 이력 보존",
+        "description": "배송 기록은 원본 수주 정보와 함께 보존되어야 한다",
+        "entities": [
+          "SalesOrder",
+          "Delivery"
+        ],
+        "userStories": [
+          "US-302"
+        ]
+      },
+      {
+        "id": "DR-007",
+        "name": "청구 생성",
+        "description": "청구는 배송 완료 후에만 생성할 수 있다",
+        "entities": [
+          "Delivery",
+          "Invoice"
+        ],
+        "userStories": [
+          "US-401"
+        ]
+      }
+    ],
+    "dataFlows": [
+      {
+        "name": "수주 생성부터 배송까지",
+        "description": "고객 주문을 받아서 배송하는 전체 프로세스",
+        "userStories": [
+          "US-101",
+          "US-102",
+          "US-301",
+          "US-302"
+        ],
+        "steps": [
+          {
+            "order": 1,
+            "action": "Create",
+            "entity": "SalesOrder",
+            "description": "고객 수주 생성"
+          },
+          {
+            "order": 2,
+            "action": "Add",
+            "entity": "SalesOrderItem",
+            "description": "주문 품목 추가"
+          },
+          {
+            "order": 3,
+            "action": "Create",
+            "entity": "ProductionPlan",
+            "description": "생산 계획 수립"
+          },
+          {
+            "order": 4,
+            "action": "Execute",
+            "entity": "Production",
+            "description": "생산 실행"
+          },
+          {
+            "order": 5,
+            "action": "Create",
+            "entity": "Delivery",
+            "description": "배송 기록 생성"
+          },
+          {
+            "order": 6,
+            "action": "Confirm",
+            "entity": "Delivery",
+            "description": "배송 완료 확인"
+          },
+          {
+            "order": 7,
+            "action": "Create",
+            "entity": "Invoice",
+            "description": "청구서 생성"
+          }
+        ]
+      },
+      {
+        "name": "구매 발주부터 입고까지",
+        "description": "자재 발주를 하고 입고 받는 프로세스",
+        "userStories": [
+          "US-103",
+          "US-104",
+          "US-201"
+        ],
+        "steps": [
+          {
+            "order": 1,
+            "action": "Create",
+            "entity": "PurchaseOrder",
+            "description": "발주서 생성"
+          },
+          {
+            "order": 2,
+            "action": "Add",
+            "entity": "PurchaseOrderItem",
+            "description": "발주 품목 추가"
+          },
+          {
+            "order": 3,
+            "action": "Wait",
+            "entity": "PurchaseOrder",
+            "description": "공급처 배송 대기"
+          },
+          {
+            "order": 4,
+            "action": "Receive",
+            "entity": "Receiving",
+            "description": "입고 확인"
+          },
+          {
+            "order": 5,
+            "action": "Add",
+            "entity": "ReceivingItem",
+            "description": "입고 품목 등록"
+          },
+          {
+            "order": 6,
+            "action": "Create",
+            "entity": "Inventory",
+            "description": "재고 증가"
+          }
+        ]
+      },
+      {
+        "name": "제품 정보 관리",
+        "description": "박스 제품의 사양과 단가를 관리하는 프로세스",
+        "userStories": [
+          "US-501"
+        ],
+        "steps": [
+          {
+            "order": 1,
+            "action": "Define",
+            "entity": "BoxProduct",
+            "description": "박스 제품 정의"
+          },
+          {
+            "order": 2,
+            "action": "Set",
+            "entity": "BoxProductUnitPrice",
+            "description": "수량별 단가 설정"
+          },
+          {
+            "order": 3,
+            "action": "Set",
+            "entity": "BoxProductMaterial",
+            "description": "자재 스펙 설정"
+          }
+        ]
+      }
+    ],
+    "glossary": [
+      {
+        "koreanTerm": "거래처",
+        "englishTerm": "Partner",
+        "definition": "상품을 구매하거나 판매하는 고객, 공급자, 협력사"
+      },
+      {
+        "koreanTerm": "수주",
+        "englishTerm": "Sales Order",
+        "definition": "고객으로부터 받은 상품 구매 요청"
+      },
+      {
+        "koreanTerm": "수주 품목",
+        "englishTerm": "Sales Order Item",
+        "definition": "수주에 포함된 개별 제품 및 수량"
+      },
+      {
+        "koreanTerm": "박스 제품",
+        "englishTerm": "Box Product",
+        "definition": "고객별 맞춤형 판지박스 상품"
+      },
+      {
+        "koreanTerm": "생산 계획",
+        "englishTerm": "Production Plan",
+        "definition": "수주를 기반으로 수립한 생산 일정 및 공정 계획"
+      },
+      {
+        "koreanTerm": "생산 실적",
+        "englishTerm": "Production",
+        "definition": "실제 생산 완료된 제품 수량 및 결과"
+      },
+      {
+        "koreanTerm": "배송",
+        "englishTerm": "Delivery",
+        "definition": "고객에게 제품을 전달하는 행위 및 기록"
+      },
+      {
+        "koreanTerm": "청구서",
+        "englishTerm": "Invoice",
+        "definition": "고객에게 제출하는 결재 요청 문서"
+      },
+      {
+        "koreanTerm": "발주",
+        "englishTerm": "Purchase Order",
+        "definition": "공급처에 자재를 요청하는 문서"
+      },
+      {
+        "koreanTerm": "입고",
+        "englishTerm": "Receiving",
+        "definition": "공급처로부터 자재를 받는 행위 및 기록"
+      },
+      {
+        "koreanTerm": "재고",
+        "englishTerm": "Inventory",
+        "definition": "창고에 보관 중인 자재 또는 제품"
+      },
+      {
+        "koreanTerm": "공정",
+        "englishTerm": "Process Step",
+        "definition": "생산 과정의 개별 단계 (재단, 인쇄, 코팅 등)"
+      },
+      {
+        "koreanTerm": "설비",
+        "englishTerm": "Equipment",
+        "definition": "생산에 사용하는 기계 및 도구"
+      },
+      {
+        "koreanTerm": "원단",
+        "englishTerm": "Paper Code",
+        "definition": "박스 제작에 사용하는 원지의 종류 및 스펙"
+      },
+      {
+        "koreanTerm": "미수금",
+        "englishTerm": "Accounts Receivable",
+        "definition": "고객으로부터 아직 받지 못한 금액"
+      },
+      {
+        "koreanTerm": "미지급금",
+        "englishTerm": "Accounts Payable",
+        "definition": "공급처에 아직 지급하지 않은 금액"
+      }
+    ],
+    "metadata": {
+      "sourceModel": "conceptual_model.json v2.0.0",
+      "conversionDate": "2026-01-27T13:44:06.613468",
+      "embeddedTypes": [
+        {
+          "name": "ProcessFlags",
+          "description": "공정 플래그 구조",
+          "schema": {
+            "type": "object",
+            "properties": {
+              "cutting": {
+                "type": "boolean",
+                "default": false,
+                "description": "재단"
+              },
+              "printing": {
+                "type": "boolean",
+                "default": false,
+                "description": "인쇄"
+              },
+              "coating": {
+                "type": "boolean",
+                "default": false,
+                "description": "코팅"
+              },
+              "laminating": {
+                "type": "boolean",
+                "default": false,
+                "description": "라미네이팅"
+              },
+              "die_cutting": {
+                "type": "boolean",
+                "default": false,
+                "description": "다이커팅"
+              },
+              "gluing": {
+                "type": "boolean",
+                "default": false,
+                "description": "접착"
+              }
+            },
+            "additionalProperties": false,
+            "minProperties": 1,
+            "comment": "At least one flag must be true for a valid box product"
+          }
+        },
+        {
+          "name": "StackingInfo",
+          "description": "파렛트 적재 정보",
+          "schema": {
+            "type": "object",
+            "properties": {
+              "palletType": {
+                "type": "string",
+                "description": "파렛트 타입"
+              },
+              "boxesPerLayer": {
+                "type": "integer",
+                "minimum": 1,
+                "description": "층당 박스 수"
+              },
+              "layersPerPallet": {
+                "type": "integer",
+                "minimum": 1,
+                "description": "파렛트당 층 수"
+              },
+              "totalPerPallet": {
+                "type": "integer",
+                "minimum": 1,
+                "description": "파렛트당 총 박스 수"
+              }
+            },
+            "required": [
+              "palletType",
+              "boxesPerLayer",
+              "layersPerPallet",
+              "totalPerPallet"
+            ],
+            "additionalProperties": false,
+            "comment": "Calculated field: totalPerPallet should equal boxesPerLayer * layersPerPallet"
+          }
+        },
+        {
+          "name": "UnitPrice",
+          "description": "수량별 단가 (deprecated - use BoxProductUnitPrice entity)",
+          "schema": {
+            "type": "object",
+            "properties": {
+              "quantity_from": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "시작 수량"
+              },
+              "quantity_to": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "종료 수량"
+              },
+              "unit_price": {
+                "type": "number",
+                "minimum": 0,
+                "description": "단가"
+              }
+            },
+            "required": [
+              "quantity_from",
+              "quantity_to",
+              "unit_price"
+            ],
+            "additionalProperties": false,
+            "comment": "This is a legacy embedded type; migration to BoxProductUnitPrice entity is recommended"
+          }
+        },
+        {
+          "name": "MaterialSpec",
+          "description": "자재 스펙",
+          "schema": {
+            "type": "object",
+            "properties": {
+              "material_code": {
+                "type": "string",
+                "description": "자재 코드"
+              },
+              "material_name": {
+                "type": "string",
+                "description": "자재명"
+              },
+              "quantity": {
+                "type": "number",
+                "minimum": 0,
+                "description": "수량"
+              },
+              "unit": {
+                "type": "string",
+                "description": "단위 (예: kg, m, sheet)"
+              }
+            },
+            "required": [
+              "material_code",
+              "material_name",
+              "quantity",
+              "unit"
+            ],
+            "additionalProperties": false
+          }
+        },
+        {
+          "name": "PartnerContact",
+          "description": "거래처 담당자",
+          "schema": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "담당자명"
+              },
+              "department": {
+                "type": "string",
+                "description": "부서"
+              },
+              "phone": {
+                "type": "string",
+                "description": "연락처"
+              },
+              "email": {
+                "type": "string",
+                "format": "email",
+                "description": "이메일"
+              },
+              "is_primary": {
+                "type": "boolean",
+                "default": false,
+                "description": "주담당자 여부"
+              }
+            },
+            "required": [
+              "name"
+            ],
+            "additionalProperties": false
+          }
+        }
+      ],
+      "qualityNotes": [
+        "모든 엔티티는 30개",
+        "모든 관계에 cardinality 정의됨",
+        "모든 FK는 명시적으로 references 정보 포함",
+        "도메인 규칙 7개 정의",
+        "데이터 흐름 3개 정의",
+        "용어 정의 16개 포함"
+      ]
+    }
+  }

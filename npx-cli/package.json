@@ -1,7 +1,7 @@
 {
   "name": "vibe-kanban-jiho",
   "private": false,
-  "version": "0.0.161",
+  "version": "0.0.162",
   "main": "index.js",
   "bin": {
     "vibe-kanban-jiho": "bin/cli.js"
