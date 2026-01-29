@@ -1,106 +1,159 @@
 {
   "version": "1.0",
-  "description": "알림 시나리오 정의 (독자/작가/관리자)",
-  "channels": [
-    "email",
-    "sms"
-  ],
+  "channel_config": {
+    "end_user": "email",
+    "provider": "email",
+    "operator": "email"
+  },
   "scenarios": {
-    "reader": [
+    "end_user": [
       {
+        "us_id": "US-005",
+        "event": "ink_charged",
+        "trigger": "결제 성공 시 Ink 잔액 증가",
+        "title": "Ink 충전 완료",
+        "message": "{amount} Ink가 충전되었습니다. 현재 잔액: {balance}",
+        "channel": "kakaotalk",
+        "variables": ["amount", "balance", "date"]
+      },
+      {
+        "us_id": "US-009",
+        "event": "proposal_created",
+        "trigger": "제안 생성 시 Ink 차감 및 에스크로 처리",
+        "title": "제안 등록 완료",
+        "message": "{episodeName}에 {amount} Ink로 제안이 등록되었습니다.",
+        "channel": "kakaotalk",
+        "variables": ["episodeName", "amount", "date"]
+      },
+      {
+        "us_id": "US-010",
+        "event": "backing_completed",
+        "trigger": "지지 시 Ink 차감 및 에스크로 처리",
+        "title": "지지 완료",
+        "message": "{proposalName} 제안에 {amount} Ink로 지지했습니다.",
+        "channel": "kakaotalk",
+        "variables": ["proposalName", "amount", "date"]
+      },
+      {
+        "us_id": "US-011",
+        "event": "direct_backing_completed",
+        "trigger": "직접 후원 완료 시 작가 정산 예정금으로 이동",
+        "title": "후원 완료",
+        "message": "{creatorName} 작가에게 {amount} Ink를 후원했습니다.",
+        "channel": "kakaotalk",
+        "variables": ["creatorName", "amount", "date"]
+      },
+      {
+        "us_id": "US-017",
         "event": "proposal_accepted",
-        "title": "제안 채택",
-        "description": "내 제안이 작가에 의해 채택됨",
-        "channel": "email",
-        "template": "제안하신 '{storyTitle}'의 제안이 채택되었습니다."
+        "trigger": "작가가 제안 Deal 시 Proposal 상태 DEAL로 변경",
+        "title": "제안이 채택되었습니다",
+        "message": "{episodeName}에 대한 제안이 채택되었습니다. 크레딧에 이름이 등록됩니다.",
+        "channel": "kakaotalk",
+        "variables": ["episodeName", "creatorName", "date"]
       },
       {
+        "us_id": "US-018",
         "event": "proposal_rejected",
-        "title": "제안 거절",
-        "description": "내 제안이 작가에 의해 거절됨",
-        "channel": "email",
-        "template": "제안하신 '{storyTitle}'의 제안이 거절되었습니다. 잉크가 환불됩니다."
+        "trigger": "작가가 제안 Drop 시 모든 Backer에게 Ink 100% 자동 반환",
+        "title": "제안이 거절되었습니다",
+        "message": "{episodeName}에 대한 제안이 거절되었습니다. {amount} Ink가 환불됩니다.",
+        "channel": "kakaotalk",
+        "variables": ["episodeName", "amount", "date"]
       },
       {
-        "event": "refund_completed",
-        "title": "환불 완료",
-        "description": "제안 거절/작품 완성으로 잉크 환불됨",
-        "channel": "email",
-        "template": "{amount} Ink가 환불되었습니다."
+        "us_id": "US-029",
+        "event": "report_submitted",
+        "trigger": "신고 완료 시",
+        "title": "신고가 접수되었습니다",
+        "message": "신고가 정상적으로 접수되었습니다. 검토 후 결과를 안내드리겠습니다.",
+        "channel": "kakaotalk",
+        "variables": ["date"]
       },
       {
-        "event": "report_resolved",
-        "title": "신고 처리 완료",
-        "description": "내 신고가 처리됨",
+        "us_id": "US-032",
+        "event": "report_processed",
+        "trigger": "관리자가 신고 처리 완료 시 신고자에게 결과 알림",
+        "title": "신고 처리 결과",
+        "message": "신고하신 건에 대한 처리가 완료되었습니다. 결과: {result}",
+        "channel": "kakaotalk",
+        "variables": ["result", "date"]
+      }
+    ],
+    "provider": [
+      {
+        "us_id": "US-009",
+        "event": "new_proposal_received",
+        "trigger": "독자가 제안 생성 시 작가에게 알림",
+        "title": "새로운 제안이 도착했습니다",
+        "message": "{episodeName}에 새로운 제안이 등록되었습니다. 제안 금액: {amount} Ink",
         "channel": "email",
-        "template": "신고하신 건이 처리 완료되었습니다."
+        "variables": ["episodeName", "amount", "userName", "date"]
       },
       {
+        "us_id": "US-010",
+        "event": "new_backing_received",
+        "trigger": "독자가 지지 시 작가에게 알림",
+        "title": "제안에 새로운 지지가 추가되었습니다",
+        "message": "{episodeName}의 제안에 {amount} Ink 지지가 추가되었습니다. 총 모금액: {totalBounty}",
+        "channel": "email",
+        "variables": ["episodeName", "amount", "totalBounty", "date"]
+      },
+      {
+        "us_id": "US-011",
+        "event": "direct_backing_received",
+        "trigger": "독자가 직접 후원 시 작가에게 알림",
+        "title": "직접 후원을 받았습니다",
+        "message": "{userName}님이 {amount} Ink를 후원해주셨습니다.",
+        "channel": "email",
+        "variables": ["userName", "amount", "date"]
+      },
+      {
+        "us_id": "US-019",
         "event": "episode_published",
-        "title": "참여 작품 완성",
-        "description": "내가 참여한 에피소드가 완성됨",
+        "trigger": "최종 원고 업로드 시 에피소드 상태 PUBLISHED로 변경, 정산금 확정",
+        "title": "에피소드가 공개되었습니다",
+        "message": "{episodeName}이(가) 공개되었습니다. 정산 예정금: {amount} Ink",
         "channel": "email",
-        "template": "참여하신 '{storyTitle}'의 새 에피소드가 완성되었습니다."
+        "variables": ["episodeName", "amount", "date"]
+      },
+      {
+        "us_id": "US-021",
+        "event": "withdrawal_requested",
+        "trigger": "출금 요청 완료 시",
+        "title": "출금 요청이 접수되었습니다",
+        "message": "{amount} 출금 요청이 접수되었습니다. 검토 후 처리 예정입니다.",
+        "channel": "email",
+        "variables": ["amount", "date"]
+      },
+      {
+        "us_id": "US-026",
+        "event": "withdrawal_approved",
+        "trigger": "관리자가 정산 요청 승인 시 상태 '이체완료'로 변경",
+        "title": "출금이 승인되었습니다",
+        "message": "{amount} 출금이 승인되었습니다. 영업일 기준 3-5일 내 입금됩니다.",
+        "channel": "email",
+        "variables": ["amount", "date"]
       }
     ],
-    "creator": [
+    "operator": [
       {
-        "event": "new_proposal",
-        "title": "새 제안 접수",
-        "description": "내 에피소드에 새 제안이 들어옴",
+        "us_id": "US-021",
+        "event": "withdrawal_request_pending",
+        "trigger": "작가가 출금 요청 시 관리자에게 알림",
+        "title": "새로운 출금 요청",
+        "message": "{userName}님이 {amount} 출금을 요청했습니다. 검토가 필요합니다.",
         "channel": "email",
-        "template": "'{episodeTitle}'에 새 제안이 접수되었습니다."
+        "variables": ["userName", "amount", "date"]
       },
       {
-        "event": "new_backing",
-        "title": "새 지지",
-        "description": "내 에피소드의 제안에 지지가 추가됨",
+        "us_id": "US-029",
+        "event": "new_report_received",
+        "trigger": "사용자가 신고 제출 시 관리자에게 알림",
+        "title": "새로운 신고가 접수되었습니다",
+        "message": "{reporterName}님이 {targetName}님을 신고했습니다. 유형: {reportType}",
         "channel": "email",
-        "template": "'{episodeTitle}'의 제안에 새 지지가 추가되었습니다."
-      },
-      {
-        "event": "new_sponsor",
-        "title": "새 후원",
-        "description": "내 에피소드에 직접 후원이 들어옴",
-        "channel": "email",
-        "template": "'{episodeTitle}'에 {amount} Ink 후원이 도착했습니다."
-      },
-      {
-        "event": "settlement_completed",
-        "title": "정산 완료",
-        "description": "출금 요청이 승인되어 입금 완료됨",
-        "channel": "email",
-        "template": "정산 요청하신 ₩{amount}이 입금 완료되었습니다."
-      },
-      {
-        "event": "settlement_rejected",
-        "title": "정산 거절",
-        "description": "출금 요청이 거절됨",
-        "channel": "email",
-        "template": "정산 요청이 거절되었습니다. 사유: {reason}"
-      }
-    ],
-    "admin": [
-      {
-        "event": "new_report",
-        "title": "새 신고 접수",
-        "description": "새 사용자 신고가 접수됨",
-        "channel": "email",
-        "template": "새 신고가 접수되었습니다. 유형: {reportType}"
-      },
-      {
-        "event": "withdrawal_request",
-        "title": "출금 요청",
-        "description": "크리에이터가 출금을 요청함",
-        "channel": "email",
-        "template": "{creatorName}님이 ₩{amount} 출금을 요청했습니다."
-      },
-      {
-        "event": "new_user_signup",
-        "title": "신규 가입",
-        "description": "새 사용자가 가입함",
-        "channel": "email",
-        "template": "새 사용자가 가입했습니다: {email}"
+        "variables": ["reporterName", "targetName", "reportType", "reason", "date"]
       }
     ]
   }
