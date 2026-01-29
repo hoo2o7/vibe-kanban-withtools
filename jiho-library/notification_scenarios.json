@@ -1,0 +1,107 @@
+{
+  "version": "1.0",
+  "description": "알림 시나리오 정의 (독자/작가/관리자)",
+  "channels": [
+    "email",
+    "sms"
+  ],
+  "scenarios": {
+    "reader": [
+      {
+        "event": "proposal_accepted",
+        "title": "제안 채택",
+        "description": "내 제안이 작가에 의해 채택됨",
+        "channel": "email",
+        "template": "제안하신 '{storyTitle}'의 제안이 채택되었습니다."
+      },
+      {
+        "event": "proposal_rejected",
+        "title": "제안 거절",
+        "description": "내 제안이 작가에 의해 거절됨",
+        "channel": "email",
+        "template": "제안하신 '{storyTitle}'의 제안이 거절되었습니다. 잉크가 환불됩니다."
+      },
+      {
+        "event": "refund_completed",
+        "title": "환불 완료",
+        "description": "제안 거절/작품 완성으로 잉크 환불됨",
+        "channel": "email",
+        "template": "{amount} Ink가 환불되었습니다."
+      },
+      {
+        "event": "report_resolved",
+        "title": "신고 처리 완료",
+        "description": "내 신고가 처리됨",
+        "channel": "email",
+        "template": "신고하신 건이 처리 완료되었습니다."
+      },
+      {
+        "event": "episode_published",
+        "title": "참여 작품 완성",
+        "description": "내가 참여한 에피소드가 완성됨",
+        "channel": "email",
+        "template": "참여하신 '{storyTitle}'의 새 에피소드가 완성되었습니다."
+      }
+    ],
+    "creator": [
+      {
+        "event": "new_proposal",
+        "title": "새 제안 접수",
+        "description": "내 에피소드에 새 제안이 들어옴",
+        "channel": "email",
+        "template": "'{episodeTitle}'에 새 제안이 접수되었습니다."
+      },
+      {
+        "event": "new_backing",
+        "title": "새 지지",
+        "description": "내 에피소드의 제안에 지지가 추가됨",
+        "channel": "email",
+        "template": "'{episodeTitle}'의 제안에 새 지지가 추가되었습니다."
+      },
+      {
+        "event": "new_sponsor",
+        "title": "새 후원",
+        "description": "내 에피소드에 직접 후원이 들어옴",
+        "channel": "email",
+        "template": "'{episodeTitle}'에 {amount} Ink 후원이 도착했습니다."
+      },
+      {
+        "event": "settlement_completed",
+        "title": "정산 완료",
+        "description": "출금 요청이 승인되어 입금 완료됨",
+        "channel": "email",
+        "template": "정산 요청하신 ₩{amount}이 입금 완료되었습니다."
+      },
+      {
+        "event": "settlement_rejected",
+        "title": "정산 거절",
+        "description": "출금 요청이 거절됨",
+        "channel": "email",
+        "template": "정산 요청이 거절되었습니다. 사유: {reason}"
+      }
+    ],
+    "admin": [
+      {
+        "event": "new_report",
+        "title": "새 신고 접수",
+        "description": "새 사용자 신고가 접수됨",
+        "channel": "email",
+        "template": "새 신고가 접수되었습니다. 유형: {reportType}"
+      },
+      {
+        "event": "withdrawal_request",
+        "title": "출금 요청",
+        "description": "크리에이터가 출금을 요청함",
+        "channel": "email",
+        "template": "{creatorName}님이 ₩{amount} 출금을 요청했습니다."
+      },
+      {
+        "event": "new_user_signup",
+        "title": "신규 가입",
+        "description": "새 사용자가 가입함",
+        "channel": "email",
+        "template": "새 사용자가 가입했습니다: {email}"
+      }
+    ]
+  }
+}

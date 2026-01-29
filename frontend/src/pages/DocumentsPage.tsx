@@ -37,6 +37,7 @@ import {
   ConceptualModelViewer,
   UserStoriesViewer,
   TasksViewer,
+  NotificationScenariosViewer,
 } from '@/components/documents/viewers';
 import { detectSpecialJsonType } from '@/utils/jsonViewerUtils';
 import type { DocumentMetadata, DocumentContent } from 'shared/types';
@@ -670,6 +671,12 @@ export function DocumentsPage() {
                     )}
                     {specialJsonType === 'tasks' && (
                       <TasksViewer
+                        content={selectedDoc.content}
+                        className="h-full"
+                      />
+                    )}
+                    {specialJsonType === 'notification_scenarios' && (
+                      <NotificationScenariosViewer
                         content={selectedDoc.content}
                         className="h-full"
                       />
