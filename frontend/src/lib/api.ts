@@ -15,6 +15,8 @@ import {
   DirectoryEntry,
   DocumentMetadata,
   DocumentContent,
+  UpdateDocumentResponse,
+  CreateFileResponse,
   ExecutionProcess,
   ExecutionProcessRepoState,
   GitBranch,
@@ -1363,6 +1365,113 @@ export const documentsApi = {
   },
 
   /**
+   * Get the current branch of the project's primary repository
+   * @param projectId - Project ID
+   */
+  getBranch: async (
+    projectId: string
+  ): Promise<{ branch: string; is_docs_branch: boolean }> => {
+    const response = await makeRequest(
+      `/api/projects/${projectId}/documents/branch`
+    );
+    return handleApiResponse<{ branch: string; is_docs_branch: boolean }>(response);
+  },
+
+  /**
+   * Get all branches of the project's primary repository
+   * @param projectId - Project ID
+   */
+  listBranches: async (
+    projectId: string
+  ): Promise<{
+    branches: Array<{ name: string; is_current: boolean; is_remote: boolean }>;
+    current_branch: string;
+  }> => {
+    const response = await makeRequest(
+      `/api/projects/${projectId}/documents/branches`
+    );
+    return handleApiResponse<{
+      branches: Array<{ name: string; is_current: boolean; is_remote: boolean }>;
+      current_branch: string;
+    }>(response);
+  },
+
+  /**
+   * Switch to a different branch
+   * @param projectId - Project ID
+   * @param branch - Branch name to switch to
+   */
+  switchBranch: async (
+    projectId: string,
+    branch: string
+  ): Promise<{ success: boolean; branch: string; message: string }> => {
+    const response = await makeRequest(
+      `/api/projects/${projectId}/documents/switch-branch`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ branch }),
+      }
+    );
+    return handleApiResponse<{ success: boolean; branch: string; message: string }>(response);
+  },
+
+  /**
+   * Get sync status for documents
+   * @param projectId - Project ID
+   */
+  getSyncStatus: async (
+    projectId: string
+  ): Promise<{
+    commits_ahead: number;
+    commits_behind: number;
+    can_sync: boolean;
+    needs_rebase: boolean;
+    current_branch: string;
+    error: string | null;
+  }> => {
+    const response = await makeRequest(
+      `/api/projects/${projectId}/documents/sync-status`
+    );
+    return handleApiResponse<{
+      commits_ahead: number;
+      commits_behind: number;
+      can_sync: boolean;
+      needs_rebase: boolean;
+      current_branch: string;
+      error: string | null;
+    }>(response);
+  },
+
+  /**
+   * Sync documents to origin/main
+   * @param projectId - Project ID
+   * @param allowRebase - Whether to allow rebase if behind origin
+   */
+  sync: async (
+    projectId: string,
+    allowRebase: boolean = false
+  ): Promise<{
+    success: boolean;
+    commits_pushed: number;
+    message: string;
+    rebased: boolean;
+  }> => {
+    const response = await makeRequest(
+      `/api/projects/${projectId}/documents/sync`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ allow_rebase: allowRebase }),
+      }
+    );
+    return handleApiResponse<{
+      success: boolean;
+      commits_pushed: number;
+      message: string;
+      rebased: boolean;
+    }>(response);
+  },
+
+  /**
    * Get content of a specific document by relative path
    * @param projectId - Project ID
    * @param relativePath - Relative path from repo root (e.g., "docs/README.md")
@@ -1389,7 +1498,7 @@ export const documentsApi = {
     projectId: string,
     relativePath: string,
     content: string
-  ): Promise<{ success: boolean; message: string }> => {
+  ): Promise<UpdateDocumentResponse> => {
     const encodedPath = encodeURIComponent(relativePath);
     const response = await makeRequest(
       `/api/projects/${projectId}/documents/${encodedPath}`,
@@ -1398,6 +1507,46 @@ export const documentsApi = {
         body: JSON.stringify({ content }),
       }
     );
-    return handleApiResponse<{ success: boolean; message: string }>(response);
+    return handleApiResponse<UpdateDocumentResponse>(response);
+  },
+
+  /**
+   * Create a new folder in the project repository
+   * @param projectId - Project ID
+   * @param path - Relative path for the new folder (e.g., "docs/subfolder")
+   */
+  createFolder: async (
+    projectId: string,
+    path: string
+  ): Promise<{ success: boolean; message: string; path: string }> => {
+    const response = await makeRequest(
+      `/api/projects/${projectId}/documents/folders`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ path }),
+      }
+    );
+    return handleApiResponse<{ success: boolean; message: string; path: string }>(response);
+  },
+
+  /**
+   * Create a new markdown file in the project repository
+   * @param projectId - Project ID
+   * @param path - Relative path for the new file (e.g., "docs/new-doc.md")
+   * @param content - Optional initial content
+   */
+  createFile: async (
+    projectId: string,
+    path: string,
+    content?: string
+  ): Promise<CreateFileResponse> => {
+    const response = await makeRequest(
+      `/api/projects/${projectId}/documents/files`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ path, content: content ?? null }),
+      }
+    );
+    return handleApiResponse<CreateFileResponse>(response);
   },
 };

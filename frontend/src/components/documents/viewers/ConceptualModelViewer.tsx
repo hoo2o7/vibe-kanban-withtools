@@ -7,8 +7,8 @@ interface ConceptualModelViewerProps {
   className?: string;
 }
 
-// Data types
-interface Attribute {
+// Data types - v1 format (legacy)
+interface AttributeV1 {
   name: string;
   type: string;
   required: boolean;
@@ -18,16 +18,59 @@ interface Attribute {
   enumValues?: string[];
 }
 
+// v2 format attribute with nested references object
+interface AttributeV2 {
+  name: string;
+  type: string;
+  required: boolean;
+  description?: string;
+  enumValues?: string[];
+  references?: {
+    entity: string;
+    attribute: string;
+    relationshipId?: string;
+    onDelete?: string;
+  };
+}
+
+// Normalized attribute for internal use
+interface Attribute {
+  name: string;
+  type: string;
+  required: boolean;
+  isPK?: boolean;
+  isFK?: boolean;
+  references?: string;
+  enumValues?: string[];
+  description?: string;
+}
+
 interface Relationship {
   entity: string;
   cardinality: string;
 }
 
+// v2 top-level relationship format
+interface RelationshipV2 {
+  from: string;
+  to: string;
+  cardinality: string;
+  type?: string;
+  optional?: { from: boolean; to: boolean };
+  description?: string;
+  relationshipId?: string;
+  businessRule?: string;
+}
+
 interface Entity {
   name: string;
+  businessName?: string;
   description?: string;
+  category?: string;
   attributes: Attribute[];
   relationships?: Relationship[];
+  relatedEntities?: string[];
+  userStories?: string[];
 }
 
 interface DomainRule {
@@ -37,10 +80,27 @@ interface DomainRule {
   entities: string[];
 }
 
+// v2 data flow step format
+interface DataFlowStepV2 {
+  order: number;
+  action: string;
+  entity: string;
+  description: string;
+}
+
 interface DataFlow {
   name: string;
-  steps: string[];
-  entities: string[];
+  description?: string;
+  steps: string[] | DataFlowStepV2[];
+  entities?: string[];
+  userStories?: string[];
+}
+
+// v2 glossary format
+interface GlossaryItemV2 {
+  koreanTerm: string;
+  englishTerm: string;
+  definition: string;
 }
 
 interface GlossaryItem {
@@ -50,14 +110,96 @@ interface GlossaryItem {
 
 interface ConceptualModelData {
   version?: string;
+  format?: string;
   project?: {
     name: string;
     description?: string;
+    version?: string;
+    domain?: string;
+  };
+  summary?: {
+    totalEntities: number;
+    totalRelationships: number;
+    entityList?: string[];
   };
   entities: Entity[];
+  relationships?: RelationshipV2[];
   domainRules?: DomainRule[];
   dataFlows?: DataFlow[];
-  glossary?: GlossaryItem[];
+  glossary?: GlossaryItem[] | GlossaryItemV2[];
+}
+
+// Normalize v2 attributes to internal format
+function normalizeAttribute(attr: AttributeV1 | AttributeV2, entityName: string): Attribute {
+  const normalized: Attribute = {
+    name: attr.name,
+    type: attr.type,
+    required: attr.required,
+    enumValues: attr.enumValues,
+    description: 'description' in attr ? attr.description : undefined,
+  };
+
+  // Check for PK (common pattern: 'id' field)
+  if (attr.name === 'id' || attr.name === `${entityName.toLowerCase()}Id`) {
+    normalized.isPK = true;
+  }
+
+  // Handle v1 format
+  if ('isPK' in attr) normalized.isPK = attr.isPK;
+  if ('isFK' in attr) normalized.isFK = attr.isFK;
+  if (typeof attr.references === 'string') {
+    normalized.references = attr.references;
+    normalized.isFK = true;
+  }
+
+  // Handle v2 format - references is an object
+  if (attr.references && typeof attr.references === 'object' && 'entity' in attr.references) {
+    normalized.isFK = true;
+    normalized.references = attr.references.entity;
+  }
+
+  return normalized;
+}
+
+// Normalize glossary items
+function normalizeGlossary(glossary?: GlossaryItem[] | GlossaryItemV2[]): GlossaryItem[] {
+  if (!glossary || glossary.length === 0) return [];
+
+  return glossary.map((item) => {
+    // Check if it's v2 format
+    if ('koreanTerm' in item) {
+      return {
+        term: `${item.koreanTerm} (${item.englishTerm})`,
+        definition: item.definition,
+      };
+    }
+    return item as GlossaryItem;
+  });
+}
+
+// Normalize data flow steps
+function normalizeDataFlowSteps(steps: string[] | DataFlowStepV2[]): string[] {
+  if (steps.length === 0) return [];
+
+  // Check if it's v2 format (array of objects)
+  if (typeof steps[0] === 'object') {
+    return (steps as DataFlowStepV2[])
+      .sort((a, b) => a.order - b.order)
+      .map((step) => `${step.action}: ${step.description}`);
+  }
+
+  return steps as string[];
+}
+
+// Extract entities from data flow (v2 format)
+function extractDataFlowEntities(steps: string[] | DataFlowStepV2[]): string[] {
+  if (steps.length === 0 || typeof steps[0] !== 'object') return [];
+  
+  const entities = new Set<string>();
+  (steps as DataFlowStepV2[]).forEach((step) => {
+    entities.add(step.entity);
+  });
+  return Array.from(entities);
 }
 
 // Entity colors - dynamic assignment
@@ -257,10 +399,12 @@ function RelationshipLines({
   entities,
   positions,
   selectedEntity,
+  topLevelRelationships,
 }: {
   entities: Entity[];
   positions: Record<string, { x: number; y: number }>;
   selectedEntity: string | null;
+  topLevelRelationships?: RelationshipV2[];
 }) {
   const lines = useMemo(() => {
     const result: Array<{
@@ -278,7 +422,7 @@ function RelationshipLines({
     const rowHeight = 24;
     const addedPairs = new Set<string>();
 
-    // First, add lines from FK attributes
+    // First, add lines from FK attributes (works for both v1 and normalized v2)
     entities.forEach((entity) => {
       entity.attributes.forEach((attr, attrIdx) => {
         if (attr.isFK && attr.references && positions[attr.references]) {
@@ -315,7 +459,42 @@ function RelationshipLines({
       });
     });
 
-    // Then, add lines from entity-level relationships (if not already added via FK)
+    // Add lines from top-level relationships (v2 format)
+    if (topLevelRelationships) {
+      topLevelRelationships.forEach((rel) => {
+        if (!positions[rel.from] || !positions[rel.to]) return;
+
+        const pairKey = [rel.from, rel.to].sort().join('-');
+        if (addedPairs.has(pairKey)) return;
+        addedPairs.add(pairKey);
+
+        const fromPos = positions[rel.from];
+        const toPos = positions[rel.to];
+
+        const fromY = fromPos.y + headerHeight + 20;
+        const toY = toPos.y + headerHeight + 20;
+
+        const fromCenterX = fromPos.x + cardWidth / 2;
+        const toCenterX = toPos.x + cardWidth / 2;
+
+        const fromX = fromCenterX < toCenterX ? fromPos.x + cardWidth : fromPos.x;
+        const toX = fromCenterX < toCenterX ? toPos.x : toPos.x + cardWidth;
+
+        const isHighlighted = selectedEntity === rel.from || selectedEntity === rel.to;
+
+        result.push({
+          id: `rel-${rel.from}-${rel.to}`,
+          fromX,
+          fromY,
+          toX,
+          toY,
+          isHighlighted,
+          cardinality: rel.cardinality,
+        });
+      });
+    }
+
+    // Then, add lines from entity-level relationships (v1 format, if not already added)
     entities.forEach((entity) => {
       entity.relationships?.forEach((rel) => {
         if (!positions[rel.entity]) return;
@@ -355,7 +534,7 @@ function RelationshipLines({
     });
 
     return result;
-  }, [entities, positions, selectedEntity]);
+  }, [entities, positions, selectedEntity, topLevelRelationships]);
 
   return (
     <svg className="absolute top-0 left-0 w-full h-full pointer-events-none overflow-visible">
@@ -438,10 +617,12 @@ function RelationshipLines({
 
 function SchemaTab({
   data,
+  normalizedEntities,
   selectedEntity,
   setSelectedEntity,
 }: {
   data: ConceptualModelData;
+  normalizedEntities: Entity[];
   selectedEntity: string | null;
   setSelectedEntity: (name: string | null) => void;
 }) {
@@ -460,7 +641,7 @@ function SchemaTab({
     const gap = { x: 80, y: 60 };
 
     const newPositions: Record<string, { x: number; y: number }> = {};
-    data.entities.forEach((entity, idx) => {
+    normalizedEntities.forEach((entity, idx) => {
       const row = Math.floor(idx / cols);
       const col = idx % cols;
       newPositions[entity.name] = {
@@ -469,19 +650,27 @@ function SchemaTab({
       };
     });
     setPositions(newPositions);
-  }, [data.entities]);
+  }, [normalizedEntities]);
 
   const entityColorMap = useMemo(() => {
     const map: Record<string, number> = {};
-    data.entities.forEach((e, i) => {
+    normalizedEntities.forEach((e, i) => {
       map[e.name] = i;
     });
     return map;
-  }, [data.entities]);
+  }, [normalizedEntities]);
 
   const handleCanvasMouseDown = useCallback(
     (e: React.MouseEvent) => {
-      if (e.target === canvasRef.current || (e.target as HTMLElement).classList.contains('canvas-bg')) {
+      // Start panning if clicking on canvas background, grid, or transform container (not on cards)
+      const target = e.target as HTMLElement;
+      const isCanvasOrBg = 
+        target === canvasRef.current || 
+        target.classList.contains('canvas-bg') ||
+        target.classList.contains('transform-container');
+      
+      if (isCanvasOrBg) {
+        e.preventDefault();
         setIsPanning(true);
         setPanStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
       }
@@ -508,6 +697,7 @@ function SchemaTab({
 
   // Zoom: attach a non-passive wheel listener to avoid
   // "Unable to preventDefault inside passive event listener invocation."
+  // Zoom is centered on mouse position
   useEffect(() => {
     const el = canvasRef.current;
     if (!el) return;
@@ -515,8 +705,26 @@ function SchemaTab({
     const onWheel = (e: WheelEvent) => {
       if (e.ctrlKey || e.metaKey) {
         e.preventDefault();
+        
+        const rect = el.getBoundingClientRect();
+        // Mouse position relative to canvas element
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+        
+        // Calculate the point under mouse in canvas coordinates (before zoom)
+        const canvasX = (mouseX - pan.x) / zoom;
+        const canvasY = (mouseY - pan.y) / zoom;
+        
+        // Calculate new zoom level
         const delta = e.deltaY > 0 ? 0.9 : 1.1;
-        setZoom((prev) => Math.min(Math.max(prev * delta, 0.3), 2));
+        const newZoom = Math.min(Math.max(zoom * delta, 0.3), 2);
+        
+        // Calculate new pan to keep the same point under mouse
+        const newPanX = mouseX - canvasX * newZoom;
+        const newPanY = mouseY - canvasY * newZoom;
+        
+        setZoom(newZoom);
+        setPan({ x: newPanX, y: newPanY });
       }
     };
 
@@ -524,9 +732,9 @@ function SchemaTab({
     return () => {
       el.removeEventListener('wheel', onWheel);
     };
-  }, []);
+  }, [zoom, pan]);
 
-  const selectedEntityData = data.entities.find((e) => e.name === selectedEntity);
+  const selectedEntityData = normalizedEntities.find((e) => e.name === selectedEntity);
   const selectedEntityColorIndex =
     selectedEntityData && Object.prototype.hasOwnProperty.call(entityColorMap, selectedEntityData.name)
       ? entityColorMap[selectedEntityData.name]
@@ -535,6 +743,23 @@ function SchemaTab({
     entityColorPalette[selectedEntityColorIndex % entityColorPalette.length] ??
     entityColorPalette[0];
 
+  // Build relationships for sidebar from v2 top-level relationships
+  const selectedEntityRelationships = useMemo(() => {
+    if (!selectedEntityData || !data.relationships) return selectedEntityData?.relationships || [];
+    
+    // Get relationships where this entity is the 'from' side
+    const fromRels = data.relationships
+      .filter((rel) => rel.from === selectedEntityData.name)
+      .map((rel) => ({ entity: rel.to, cardinality: rel.cardinality }));
+    
+    // Get relationships where this entity is the 'to' side
+    const toRels = data.relationships
+      .filter((rel) => rel.to === selectedEntityData.name)
+      .map((rel) => ({ entity: rel.from, cardinality: rel.cardinality }));
+    
+    return [...fromRels, ...toRels];
+  }, [selectedEntityData, data.relationships]);
+
   return (
     <div className="flex h-full min-w-0">
       {/* Canvas */}
@@ -542,7 +767,7 @@ function SchemaTab({
         ref={canvasRef}
         className="flex-1 min-w-0 relative overflow-hidden"
         onMouseDown={handleCanvasMouseDown}
-        style={{ cursor: isPanning ? 'grabbing' : 'default' }}
+        style={{ cursor: isPanning ? 'grabbing' : 'grab' }}
       >
         {/* Grid background */}
         <div
@@ -559,6 +784,7 @@ function SchemaTab({
 
         {/* Transform container */}
         <div
+          className="transform-container"
           style={{
             transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
             transformOrigin: '0 0',
@@ -568,12 +794,13 @@ function SchemaTab({
           }}
         >
           <RelationshipLines
-            entities={data.entities}
+            entities={normalizedEntities}
             positions={positions}
             selectedEntity={selectedEntity}
+            topLevelRelationships={data.relationships}
           />
 
-          {data.entities.map((entity) =>
+          {normalizedEntities.map((entity) =>
             positions[entity.name] ? (
               <TableCard
                 key={entity.name}
@@ -639,7 +866,12 @@ function SchemaTab({
                     backgroundColor: selectedEntityColors.text,
                   }}
                 />
-                <h3 className="text-sm font-semibold text-high">{selectedEntityData.name}</h3>
+                <div>
+                  <h3 className="text-sm font-semibold text-high">{selectedEntityData.name}</h3>
+                  {selectedEntityData.businessName && (
+                    <span className="text-xs text-low">{selectedEntityData.businessName}</span>
+                  )}
+                </div>
               </div>
               <button
                 onClick={() => setSelectedEntity(null)}
@@ -651,6 +883,14 @@ function SchemaTab({
 
             {selectedEntityData.description && (
               <p className="text-xs text-low mb-3">{selectedEntityData.description}</p>
+            )}
+
+            {selectedEntityData.category && (
+              <div className="mb-3">
+                <span className="text-xs px-1.5 py-0.5 bg-brand/10 text-brand rounded">
+                  {selectedEntityData.category}
+                </span>
+              </div>
             )}
 
             {/* Attributes */}
@@ -687,19 +927,22 @@ function SchemaTab({
                     {attr.isFK && attr.references && (
                       <div className="text-info/70 mt-0.5">→ {attr.references}</div>
                     )}
+                    {attr.description && (
+                      <div className="text-low/70 mt-0.5 text-[10px]">{attr.description}</div>
+                    )}
                   </div>
                 ))}
               </div>
             </div>
 
             {/* Relationships */}
-            {selectedEntityData.relationships && selectedEntityData.relationships.length > 0 && (
+            {selectedEntityRelationships.length > 0 && (
               <div>
                 <h4 className="text-xs font-medium text-low uppercase tracking-wider mb-2">
-                  Relationships ({selectedEntityData.relationships.length})
+                  Relationships ({selectedEntityRelationships.length})
                 </h4>
                 <div className="space-y-1">
-                  {selectedEntityData.relationships.map((rel, idx) => (
+                  {selectedEntityRelationships.map((rel, idx) => (
                     <div
                       key={idx}
                       onClick={() => setSelectedEntity(rel.entity)}
@@ -725,20 +968,30 @@ function SchemaTab({
 // Data Flows Tab
 // =====================================================
 
-function DataFlowsTab({ data }: { data: ConceptualModelData }) {
+function DataFlowsTab({ data, normalizedEntities }: { data: ConceptualModelData; normalizedEntities: Entity[] }) {
   const [selectedFlow, setSelectedFlow] = useState<number | null>(null);
 
   const flows = data.dataFlows || [];
 
   const entityColorMap = useMemo(() => {
     const map: Record<string, number> = {};
-    data.entities.forEach((e, i) => {
+    normalizedEntities.forEach((e, i) => {
       map[e.name] = i;
     });
     return map;
-  }, [data.entities]);
+  }, [normalizedEntities]);
 
-  if (flows.length === 0) {
+  // Normalize flows for display
+  const normalizedFlows = useMemo(() => {
+    return flows.map((flow) => ({
+      name: flow.name,
+      description: flow.description,
+      steps: normalizeDataFlowSteps(flow.steps),
+      entities: flow.entities || extractDataFlowEntities(flow.steps),
+    }));
+  }, [flows]);
+
+  if (normalizedFlows.length === 0) {
     return (
       <div className="flex items-center justify-center h-full text-low">
         No data flows defined
@@ -751,9 +1004,9 @@ function DataFlowsTab({ data }: { data: ConceptualModelData }) {
       {/* Flow list */}
       <div className="w-72 border-r overflow-auto p-3">
         <h3 className="text-xs font-medium text-low uppercase tracking-wider mb-3">
-          Data Flows ({flows.length})
+          Data Flows ({normalizedFlows.length})
         </h3>
-        {flows.map((flow, idx) => (
+        {normalizedFlows.map((flow, idx) => (
           <div
             key={idx}
             onClick={() => setSelectedFlow(selectedFlow === idx ? null : idx)}
@@ -777,12 +1030,16 @@ function DataFlowsTab({ data }: { data: ConceptualModelData }) {
         {selectedFlow !== null ? (
           <div>
             <h2 className="text-lg font-semibold text-high mb-2">
-              {flows[selectedFlow].name}
+              {normalizedFlows[selectedFlow].name}
             </h2>
+
+            {normalizedFlows[selectedFlow].description && (
+              <p className="text-sm text-low mb-4">{normalizedFlows[selectedFlow].description}</p>
+            )}
 
             {/* Related entities */}
             <div className="flex gap-1.5 mb-6 flex-wrap">
-              {flows[selectedFlow].entities.map((entity) => {
+              {normalizedFlows[selectedFlow].entities.map((entity) => {
                 const colorIdx = entityColorMap[entity] ?? 0;
                 const colors = entityColorPalette[colorIdx % entityColorPalette.length];
                 return (
@@ -799,10 +1056,10 @@ function DataFlowsTab({ data }: { data: ConceptualModelData }) {
 
             {/* Steps timeline */}
             <div className="relative">
-              {flows[selectedFlow].steps.map((step, idx) => (
+              {normalizedFlows[selectedFlow].steps.map((step, idx) => (
                 <div key={idx} className="flex items-start mb-4 relative">
                   {/* Connector line */}
-                  {idx < flows[selectedFlow].steps.length - 1 && (
+                  {idx < normalizedFlows[selectedFlow].steps.length - 1 && (
                     <div className="absolute left-[19px] top-10 w-0.5 h-[calc(100%+4px)] bg-gradient-to-b from-brand/30 to-info/30" />
                   )}
 
@@ -833,16 +1090,16 @@ function DataFlowsTab({ data }: { data: ConceptualModelData }) {
 // Domain Rules Tab
 // =====================================================
 
-function DomainRulesTab({ data }: { data: ConceptualModelData }) {
+function DomainRulesTab({ data, normalizedEntities }: { data: ConceptualModelData; normalizedEntities: Entity[] }) {
   const rules = data.domainRules || [];
 
   const entityColorMap = useMemo(() => {
     const map: Record<string, number> = {};
-    data.entities.forEach((e, i) => {
+    normalizedEntities.forEach((e, i) => {
       map[e.name] = i;
     });
     return map;
-  }, [data.entities]);
+  }, [normalizedEntities]);
 
   if (rules.length === 0) {
     return (
@@ -897,7 +1154,9 @@ function DomainRulesTab({ data }: { data: ConceptualModelData }) {
 
 function GlossaryTab({ data }: { data: ConceptualModelData }) {
   const [searchTerm, setSearchTerm] = useState('');
-  const glossary = useMemo(() => data.glossary ?? [], [data.glossary]);
+  
+  // Normalize glossary items for display
+  const glossary = useMemo(() => normalizeGlossary(data.glossary), [data.glossary]);
 
   const filtered = useMemo(() => {
     if (!searchTerm) return glossary;
@@ -960,19 +1219,30 @@ export function ConceptualModelViewer({
   const [activeTab, setActiveTab] = useState<TabType>('schema');
   const [selectedEntity, setSelectedEntity] = useState<string | null>(null);
 
-  const { data, parseError } = useMemo(() => {
+  const { data, normalizedEntities, parseError } = useMemo(() => {
     try {
       const parsed = JSON.parse(content) as ConceptualModelData;
       if (!parsed.entities || !Array.isArray(parsed.entities)) {
         return {
           data: null,
+          normalizedEntities: [],
           parseError: 'Invalid conceptual model format: missing entities array',
         };
       }
-      return { data: parsed, parseError: null };
+
+      // Normalize entities with attributes
+      const normalized: Entity[] = parsed.entities.map((entity) => ({
+        ...entity,
+        attributes: entity.attributes.map((attr) => 
+          normalizeAttribute(attr as AttributeV1 | AttributeV2, entity.name)
+        ),
+      }));
+
+      return { data: parsed, normalizedEntities: normalized, parseError: null };
     } catch (e) {
       return {
         data: null,
+        normalizedEntities: [],
         parseError: e instanceof Error ? e.message : 'Invalid JSON',
       };
     }
@@ -1018,8 +1288,13 @@ export function ConceptualModelViewer({
           </div>
           <div className="flex items-center gap-3">
             <span className="text-xs text-low">
-              <span className="text-brand font-medium">{data.entities.length}</span> entities
+              <span className="text-brand font-medium">{normalizedEntities.length}</span> entities
             </span>
+            {data.relationships && (
+              <span className="text-xs text-low">
+                <span className="text-info font-medium">{data.relationships.length}</span> relationships
+              </span>
+            )}
             {data.version && (
               <span className="text-xs text-low font-ibm-plex-mono bg-panel px-1.5 py-0.5 rounded">
                 v{data.version}
@@ -1053,12 +1328,13 @@ export function ConceptualModelViewer({
         {activeTab === 'schema' && (
           <SchemaTab
             data={data}
+            normalizedEntities={normalizedEntities}
             selectedEntity={selectedEntity}
             setSelectedEntity={setSelectedEntity}
           />
         )}
-        {activeTab === 'flows' && <DataFlowsTab data={data} />}
-        {activeTab === 'rules' && <DomainRulesTab data={data} />}
+        {activeTab === 'flows' && <DataFlowsTab data={data} normalizedEntities={normalizedEntities} />}
+        {activeTab === 'rules' && <DomainRulesTab data={data} normalizedEntities={normalizedEntities} />}
         {activeTab === 'glossary' && <GlossaryTab data={data} />}
       </main>
     </div>

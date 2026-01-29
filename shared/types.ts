@@ -378,6 +378,114 @@ export type DocumentContent = { metadata: DocumentMetadata, content: string, };
 
 export type ListDocumentsResponse = { documents: Array<DocumentMetadata>, };
 
+export type UpdateDocumentRequest = { content: string, };
+
+export type UpdateDocumentResponse = { success: boolean, message: string, 
+/**
+ * The branch where the document was saved
+ */
+branch: string | null, 
+/**
+ * Whether changes were committed
+ */
+committed: boolean, };
+
+export type GetBranchResponse = { 
+/**
+ * Current branch name of the primary repository
+ */
+branch: string, 
+/**
+ * Whether this is the expected docs branch (main)
+ */
+is_docs_branch: boolean, };
+
+export type ListBranchesResponse = { 
+/**
+ * List of branch names
+ */
+branches: Array<BranchInfo>, 
+/**
+ * Current branch name
+ */
+current_branch: string, };
+
+export type BranchInfo = { name: string, is_current: boolean, is_remote: boolean, };
+
+export type SwitchBranchRequest = { branch: string, };
+
+export type SwitchBranchResponse = { success: boolean, branch: string, message: string, 
+/**
+ * Whether changes were stashed during the switch
+ */
+stashed: boolean, };
+
+export type CreateFolderRequest = { 
+/**
+ * Relative path for the new folder (e.g., "seed_docs/subfolder")
+ */
+path: string, };
+
+export type CreateFolderResponse = { success: boolean, message: string, path: string, };
+
+export type CreateFileRequest = { 
+/**
+ * Relative path for the new file (e.g., "seed_docs/new-doc.md")
+ */
+path: string, 
+/**
+ * Optional initial content
+ */
+content: string | null, };
+
+export type CreateFileResponse = { success: boolean, message: string, metadata: DocumentMetadata, 
+/**
+ * The branch where the file was created
+ */
+branch: string | null, 
+/**
+ * Whether changes were committed
+ */
+committed: boolean, };
+
+export type SyncStatusResponse = { 
+/**
+ * Number of commits ahead of origin/main (local changes not pushed)
+ */
+commits_ahead: number, 
+/**
+ * Number of commits behind origin/main (remote changes not pulled)
+ */
+commits_behind: number, 
+/**
+ * Whether sync is possible (on main branch)
+ */
+can_sync: boolean, 
+/**
+ * Whether rebase is needed before pushing
+ */
+needs_rebase: boolean, 
+/**
+ * Current branch name
+ */
+current_branch: string, 
+/**
+ * Error message if any
+ */
+error: string | null, };
+
+export type SyncRequest = { 
+/**
+ * If true, will rebase before pushing when behind origin
+ */
+allow_rebase: boolean, };
+
+export type SyncResponse = { success: boolean, commits_pushed: number, message: string, 
+/**
+ * Whether rebase was performed
+ */
+rebased: boolean, };
+
 export type DirectoryEntry = { name: string, path: string, is_directory: boolean, is_git_repo: boolean, last_modified: bigint | null, };
 
 export type DirectoryListResponse = { entries: Array<DirectoryEntry>, current_path: string, };

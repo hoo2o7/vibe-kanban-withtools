@@ -342,6 +342,193 @@ impl GitCli {
         self.git(worktree_path, ["commit", "-m", message])?;
         Ok(())
     }
+
+    /// Checkout a branch in the given repository/worktree.
+    pub fn checkout(&self, repo_path: &Path, branch: &str) -> Result<(), GitCliError> {
+        self.git(repo_path, ["checkout", branch])?;
+        Ok(())
+    }
+
+    /// Check if there are uncommitted changes (staged or unstaged).
+    pub fn has_uncommitted_changes(&self, repo_path: &Path) -> Result<bool, GitCliError> {
+        // Check for staged changes
+        let staged = self.git(repo_path, ["diff", "--cached", "--quiet"]);
+        if staged.is_err() {
+            return Ok(true); // Has staged changes
+        }
+
+        // Check for unstaged changes
+        let unstaged = self.git(repo_path, ["diff", "--quiet"]);
+        if unstaged.is_err() {
+            return Ok(true); // Has unstaged changes
+        }
+
+        // Check for untracked files
+        let untracked = self.git(repo_path, ["ls-files", "--others", "--exclude-standard"])?;
+        if !untracked.trim().is_empty() {
+            return Ok(true); // Has untracked files
+        }
+
+        Ok(false)
+    }
+
+    /// Stash all changes including untracked files.
+    /// Returns true if changes were stashed, false if working tree was clean.
+    pub fn stash_push(&self, repo_path: &Path, message: &str) -> Result<bool, GitCliError> {
+        // Check if there's anything to stash first
+        if !self.has_uncommitted_changes(repo_path)? {
+            return Ok(false);
+        }
+
+        self.git(repo_path, ["stash", "push", "--include-untracked", "-m", message])?;
+        Ok(true)
+    }
+
+    /// Pop the most recent stash.
+    pub fn stash_pop(&self, repo_path: &Path) -> Result<(), GitCliError> {
+        self.git(repo_path, ["stash", "pop"])?;
+        Ok(())
+    }
+
+    /// Checkout a branch, automatically stashing and restoring changes if needed.
+    /// Returns true if stash was used, false otherwise.
+    pub fn checkout_with_stash(
+        &self,
+        repo_path: &Path,
+        branch: &str,
+    ) -> Result<bool, GitCliError> {
+        // First, try a simple checkout
+        let result = self.git(repo_path, ["checkout", branch]);
+
+        if result.is_ok() {
+            return Ok(false); // No stash needed
+        }
+
+        // Checkout failed, try with stash
+        let stash_message = format!("Auto-stash before switching to branch '{}'", branch);
+        let stashed = self.stash_push(repo_path, &stash_message)?;
+
+        if !stashed {
+            // No changes to stash, but checkout still failed - return the original error
+            self.git(repo_path, ["checkout", branch])?;
+            return Ok(false);
+        }
+
+        // Now try checkout again
+        match self.git(repo_path, ["checkout", branch]) {
+            Ok(_) => {
+                // Checkout succeeded, try to restore stash
+                if let Err(e) = self.stash_pop(repo_path) {
+                    tracing::warn!(
+                        "Stash pop failed after checkout (changes saved in stash): {}",
+                        e
+                    );
+                    // Don't fail - the checkout succeeded and changes are safe in stash
+                }
+                Ok(true)
+            }
+            Err(e) => {
+                // Checkout failed even after stash, restore the stash and return error
+                let _ = self.stash_pop(repo_path); // Best effort restore
+                Err(e)
+            }
+        }
+    }
+
+    /// List all files in a specific branch.
+    /// Returns a list of relative file paths.
+    pub fn list_files_in_branch(
+        &self,
+        repo_path: &Path,
+        branch: &str,
+    ) -> Result<Vec<String>, GitCliError> {
+        let output = self.git(repo_path, ["ls-tree", "-r", "--name-only", branch])?;
+        Ok(output.lines().map(|s| s.to_string()).collect())
+    }
+
+    /// Checkout specific files from a branch without switching branches.
+    /// This copies files from the specified branch to the current working tree.
+    pub fn checkout_paths_from_branch(
+        &self,
+        repo_path: &Path,
+        branch: &str,
+        paths: &[&str],
+    ) -> Result<(), GitCliError> {
+        if paths.is_empty() {
+            return Ok(());
+        }
+
+        let mut args: Vec<OsString> = vec![
+            "checkout".into(),
+            OsString::from(branch),
+            "--".into(),
+        ];
+        for path in paths {
+            args.push(OsString::from(*path));
+        }
+
+        self.git(repo_path, args)?;
+        Ok(())
+    }
+
+    /// Fetch a branch from a remote.
+    pub fn fetch(&self, repo_path: &Path, remote: &str, branch: &str) -> Result<(), GitCliError> {
+        let envs = vec![(OsString::from("GIT_TERMINAL_PROMPT"), OsString::from("0"))];
+        let args = ["fetch", remote, branch];
+        match self.git_with_env(repo_path, args, &envs) {
+            Ok(_) => Ok(()),
+            Err(GitCliError::CommandFailed(msg)) => Err(self.classify_cli_error(msg)),
+            Err(err) => Err(err),
+        }
+    }
+
+    /// Get the number of commits ahead and behind compared to a remote branch.
+    /// Returns (ahead, behind) tuple.
+    pub fn get_ahead_behind(
+        &self,
+        repo_path: &Path,
+        local_branch: &str,
+        remote_branch: &str,
+    ) -> Result<(usize, usize), GitCliError> {
+        // Use rev-list to count commits
+        // ahead: commits in local that are not in remote
+        // behind: commits in remote that are not in local
+        let output = self.git(
+            repo_path,
+            [
+                "rev-list",
+                "--left-right",
+                "--count",
+                &format!("{}...{}", local_branch, remote_branch),
+            ],
+        )?;
+
+        let parts: Vec<&str> = output.trim().split_whitespace().collect();
+        if parts.len() != 2 {
+            return Ok((0, 0)); // No tracking info or same commit
+        }
+
+        let ahead = parts[0].parse::<usize>().unwrap_or(0);
+        let behind = parts[1].parse::<usize>().unwrap_or(0);
+        Ok((ahead, behind))
+    }
+
+    /// Pull with rebase from a remote branch.
+    pub fn pull_rebase(
+        &self,
+        repo_path: &Path,
+        remote: &str,
+        branch: &str,
+    ) -> Result<(), GitCliError> {
+        let envs = vec![(OsString::from("GIT_TERMINAL_PROMPT"), OsString::from("0"))];
+        let args = ["pull", "--rebase", remote, branch];
+        match self.git_with_env(repo_path, args, &envs) {
+            Ok(_) => Ok(()),
+            Err(GitCliError::CommandFailed(msg)) => Err(self.classify_cli_error(msg)),
+            Err(err) => Err(err),
+        }
+    }
+
     /// Fetch a branch to the given remote using native git authentication.
     pub fn fetch_with_refspec(
         &self,

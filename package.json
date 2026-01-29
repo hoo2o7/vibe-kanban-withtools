@@ -1,9 +1,8 @@
 {
-  "name": "vibe-kanban",
-  "version": "0.0.158",
-  "private": true,
+  "name": "vibe-kanban-jiho",
+  "version": "0.0.162",
   "bin": {
-    "vibe-kanban": "npx-cli/bin/cli.js"
+    "vibe-kanban-jiho": "npx-cli/bin/cli.js"
   },
   "files": [
     "npx-cli/bin/cli.js",
