@@ -29,16 +29,25 @@ interface NotificationScenariosViewerProps {
 interface NotificationEvent {
   event: string;
   title: string;
-  description: string;
+  // Old format
+  description?: string;
+  template?: string;
+  // New format
+  us_id?: string;
+  trigger?: string;
+  message?: string;
+  variables?: string[];
   channel: string;
-  template: string;
   [key: string]: unknown;
 }
 
 interface NotificationScenariosData {
   version?: string;
   description?: string;
+  // Old format
   channels?: string[];
+  // New format
+  channel_config?: Record<string, string>;
   scenarios?: Record<string, NotificationEvent[]>;
   [key: string]: unknown;
 }
@@ -56,15 +65,21 @@ const roleColorPalette = [
 
 // Role icons mapping
 const roleIcons: Record<string, React.ComponentType<{ className?: string }>> = {
+  // Old format
   reader: User,
   creator: Pen,
   admin: Shield,
   user: User,
   system: Bell,
+  // New format
+  end_user: User,
+  provider: Pen,
+  operator: Shield,
 };
 
 // Event icons mapping
 const eventIcons: Record<string, React.ComponentType<{ className?: string }>> = {
+  // Common events
   proposal_accepted: CheckCircle2,
   proposal_rejected: XCircle,
   refund_completed: RefreshCw,
@@ -78,6 +93,20 @@ const eventIcons: Record<string, React.ComponentType<{ className?: string }>> = 
   new_report: AlertTriangle,
   withdrawal_request: DollarSign,
   new_user_signup: UserPlus,
+  // New format events
+  ink_charged: DollarSign,
+  proposal_created: FileText,
+  backing_completed: Heart,
+  direct_backing_completed: Gift,
+  report_submitted: AlertTriangle,
+  report_processed: CheckCircle2,
+  new_proposal_received: Bell,
+  new_backing_received: Heart,
+  direct_backing_received: Gift,
+  withdrawal_requested: DollarSign,
+  withdrawal_approved: CheckCircle2,
+  withdrawal_request_pending: DollarSign,
+  new_report_received: AlertTriangle,
 };
 
 function getRoleIcon(role: string) {
@@ -94,11 +123,16 @@ function getRoleColor(index: number) {
 
 function getRoleLabel(role: string): string {
   const labels: Record<string, string> = {
+    // Old format
     reader: '독자 (Reader)',
     creator: '작가 (Creator)',
     admin: '관리자 (Admin)',
     user: '사용자 (User)',
     system: '시스템 (System)',
+    // New format
+    end_user: '사용자 (End User)',
+    provider: '제공자 (Provider)',
+    operator: '운영자 (Operator)',
   };
   return labels[role.toLowerCase()] || role;
 }
@@ -138,6 +172,10 @@ function EventCard({
   const color = getRoleColor(roleIndex);
   const EventIcon = getEventIcon(event.event);
 
+  // Support both old and new format
+  const description = event.trigger || event.description || '';
+  const messageTemplate = event.message || event.template || '';
+
   return (
     <div
       onClick={onToggle}
@@ -151,11 +189,16 @@ function EventCard({
           <EventIcon className={cn('w-4 h-4', color.text)} />
         </div>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
+          <div className="flex items-center gap-2 mb-1 flex-wrap">
+            {event.us_id && (
+              <span className="text-xs font-ibm-plex-mono text-info bg-info/10 px-1.5 py-0.5 rounded">
+                {event.us_id}
+              </span>
+            )}
             <span className="text-sm font-medium text-high">{event.title}</span>
             <ChannelBadge channel={event.channel} />
           </div>
-          <p className="text-xs text-low mb-1.5">{event.description}</p>
+          <p className="text-xs text-low mb-1.5">{description}</p>
           <code className={cn('text-xs px-1.5 py-0.5 rounded font-ibm-plex-mono', color.bg, color.text)}>
             {event.event}
           </code>
@@ -164,18 +207,63 @@ function EventCard({
       </div>
 
       {isExpanded && (
-        <div className="mt-3 pt-3 border-t border-border">
-          <div className="text-xs text-low mb-1 font-medium">템플릿:</div>
-          <p className="text-sm text-normal bg-panel p-2 rounded border border-border whitespace-pre-wrap">{event.template}</p>
+        <div className="mt-3 pt-3 border-t border-border space-y-2">
+          {/* Message Template */}
+          {messageTemplate && (
+            <div>
+              <div className="text-xs text-low mb-1 font-medium">메시지:</div>
+              <p className="text-sm text-normal bg-panel p-2 rounded border border-border whitespace-pre-wrap">
+                {messageTemplate}
+              </p>
+            </div>
+          )}
 
-          {/* Additional fields */}
+          {/* Variables */}
+          {event.variables && event.variables.length > 0 && (
+            <div>
+              <div className="text-xs text-low mb-1 font-medium">변수:</div>
+              <div className="flex flex-wrap gap-1">
+                {event.variables.map((v, i) => (
+                  <span
+                    key={i}
+                    className="text-xs font-ibm-plex-mono bg-panel px-1.5 py-0.5 rounded text-low"
+                  >
+                    {`{${v}}`}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Additional fields (excluding known fields) */}
           {Object.entries(event)
-            .filter(([key]) => !['event', 'title', 'description', 'channel', 'template'].includes(key))
+            .filter(
+              ([key]) =>
+                ![
+                  'event',
+                  'title',
+                  'description',
+                  'channel',
+                  'template',
+                  'us_id',
+                  'trigger',
+                  'message',
+                  'variables',
+                ].includes(key)
+            )
             .map(([key, value]) => (
-              <div key={key} className="mt-2">
+              <div key={key}>
                 <div className="text-xs text-low mb-1 font-medium capitalize">{key.replace(/_/g, ' ')}:</div>
                 <div className="text-sm text-normal">
-                  {typeof value === 'object' ? (
+                  {Array.isArray(value) ? (
+                    <div className="flex flex-wrap gap-1">
+                      {value.map((item, i) => (
+                        <span key={i} className="text-xs bg-panel px-1.5 py-0.5 rounded">
+                          {String(item)}
+                        </span>
+                      ))}
+                    </div>
+                  ) : typeof value === 'object' ? (
                     <pre className="text-xs font-ibm-plex-mono bg-panel p-2 rounded overflow-auto">
                       {JSON.stringify(value, null, 2)}
                     </pre>
@@ -264,17 +352,27 @@ function TableView({
 }: {
   scenarios: Record<string, NotificationEvent[]>;
 }) {
+  // Check if new format (has us_id in any event)
+  const hasUsId = Object.values(scenarios).some((events) =>
+    events.some((e) => e.us_id)
+  );
+
   return (
     <div className="overflow-auto">
       <table className="w-full text-sm">
         <thead className="bg-secondary border-b border-border">
           <tr>
             <th className="px-3 py-2 text-left text-xs font-medium text-low">역할</th>
+            {hasUsId && (
+              <th className="px-3 py-2 text-left text-xs font-medium text-low">US ID</th>
+            )}
             <th className="px-3 py-2 text-left text-xs font-medium text-low">이벤트</th>
             <th className="px-3 py-2 text-left text-xs font-medium text-low">제목</th>
-            <th className="px-3 py-2 text-left text-xs font-medium text-low">설명</th>
+            <th className="px-3 py-2 text-left text-xs font-medium text-low">
+              {hasUsId ? '트리거' : '설명'}
+            </th>
             <th className="px-3 py-2 text-left text-xs font-medium text-low">채널</th>
-            <th className="px-3 py-2 text-left text-xs font-medium text-low">템플릿</th>
+            <th className="px-3 py-2 text-left text-xs font-medium text-low">메시지</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-border">
@@ -282,8 +380,11 @@ function TableView({
             events.map((event, eventIndex) => {
               const color = getRoleColor(roleIndex);
               const RoleIcon = getRoleIcon(role);
+              const description = event.trigger || event.description || '';
+              const messageTemplate = event.message || event.template || '';
+
               return (
-                <tr key={`${role}-${event.event}`} className="hover:bg-secondary/50">
+                <tr key={`${role}-${event.event}-${eventIndex}`} className="hover:bg-secondary/50">
                   <td className="px-3 py-2">
                     {eventIndex === 0 && (
                       <span
@@ -294,22 +395,31 @@ function TableView({
                         )}
                       >
                         <RoleIcon className="w-3 h-3" />
-                        {role}
+                        {getRoleLabel(role).split(' ')[0]}
                       </span>
                     )}
                   </td>
+                  {hasUsId && (
+                    <td className="px-3 py-2">
+                      {event.us_id && (
+                        <span className="text-xs font-ibm-plex-mono text-info">
+                          {event.us_id}
+                        </span>
+                      )}
+                    </td>
+                  )}
                   <td className="px-3 py-2">
                     <code className="text-xs bg-panel px-1.5 py-0.5 rounded font-ibm-plex-mono text-low">
                       {event.event}
                     </code>
                   </td>
                   <td className="px-3 py-2 font-medium text-high">{event.title}</td>
-                  <td className="px-3 py-2 text-low">{event.description}</td>
+                  <td className="px-3 py-2 text-low text-xs">{description}</td>
                   <td className="px-3 py-2">
                     <ChannelBadge channel={event.channel} />
                   </td>
-                  <td className="px-3 py-2 text-low max-w-xs truncate" title={event.template}>
-                    {event.template}
+                  <td className="px-3 py-2 text-low max-w-xs truncate text-xs" title={messageTemplate}>
+                    {messageTemplate}
                   </td>
                 </tr>
               );
@@ -454,30 +564,48 @@ export function NotificationScenariosViewer({ content, className }: Notification
       </main>
 
       {/* Footer - Channels Legend */}
-      {data.channels && data.channels.length > 0 && (
+      {(data.channels || data.channel_config) && (
         <footer className="px-4 py-2 border-t border-border">
-          <div className="flex items-center gap-4">
-            <span className="text-xs text-low">지원 채널:</span>
-            {data.channels.map((channel) => (
-              <div key={channel} className="flex items-center gap-1.5">
-                {channel.toLowerCase() === 'email' ? (
-                  <Mail className="w-3.5 h-3.5 text-normal" />
-                ) : channel.toLowerCase() === 'sms' ? (
-                  <MessageSquare className="w-3.5 h-3.5 text-low" />
-                ) : (
-                  <Bell className="w-3.5 h-3.5 text-low" />
-                )}
-                <span
-                  className={cn(
-                    'text-xs',
-                    channel.toLowerCase() === 'email' ? 'text-normal' : 'text-low'
+          <div className="flex items-center gap-4 flex-wrap">
+            <span className="text-xs text-low">채널 설정:</span>
+            {data.channel_config ? (
+              // New format: channel_config
+              Object.entries(data.channel_config).map(([role, channel]) => (
+                <div key={role} className="flex items-center gap-1.5">
+                  <span className="text-xs text-low">{getRoleLabel(role).split(' ')[0]}:</span>
+                  {channel.toLowerCase() === 'email' ? (
+                    <Mail className="w-3.5 h-3.5 text-normal" />
+                  ) : channel.toLowerCase() === 'kakaotalk' ? (
+                    <MessageSquare className="w-3.5 h-3.5 text-warning" />
+                  ) : (
+                    <Bell className="w-3.5 h-3.5 text-low" />
                   )}
-                >
-                  {channel.toUpperCase()}
-                  {channel.toLowerCase() === 'sms' && ' (준비중)'}
-                </span>
-              </div>
-            ))}
+                  <span className="text-xs text-normal">{channel}</span>
+                </div>
+              ))
+            ) : (
+              // Old format: channels array
+              data.channels?.map((channel) => (
+                <div key={channel} className="flex items-center gap-1.5">
+                  {channel.toLowerCase() === 'email' ? (
+                    <Mail className="w-3.5 h-3.5 text-normal" />
+                  ) : channel.toLowerCase() === 'sms' ? (
+                    <MessageSquare className="w-3.5 h-3.5 text-low" />
+                  ) : (
+                    <Bell className="w-3.5 h-3.5 text-low" />
+                  )}
+                  <span
+                    className={cn(
+                      'text-xs',
+                      channel.toLowerCase() === 'email' ? 'text-normal' : 'text-low'
+                    )}
+                  >
+                    {channel.toUpperCase()}
+                    {channel.toLowerCase() === 'sms' && ' (준비중)'}
+                  </span>
+                </div>
+              ))
+            )}
           </div>
         </footer>
       )}
